@@ -66,6 +66,9 @@ namespace GTR {
 		Scene();
 
 		std::string filename;
+		// Esto es un contenedor --> esto tiene objetos de la clase base de entity, pero podemos estar guardando
+		// cualquier objeto hijo de esta clase. Para saber de qué tipo es cada uno, tenemos un enum dentro de la clase
+		// que nos lo chiva y de esta forma podemos hacer un cast y acceder a propiedades específicas de los hijos
 		std::vector<BaseEntity*> entities;
 
 		void clear();

@@ -111,6 +111,8 @@ namespace GTR {
 		Node* getNodeByName(const char* name);
 
 				//Manager to cache loaded prefabs
+		// Estas dos funciones son estaticas --> no es necesario hacer una instancia de prefab para usarla,
+		// pero está aquí por que así es más fácil encontrarla. Es como una función global, todos pueden acceder
 		static std::map<std::string, Prefab*> sPrefabsLoaded;
 		static Prefab* Get(const char* filename);
 		void registerPrefab(std::string name);

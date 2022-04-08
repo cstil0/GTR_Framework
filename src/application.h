@@ -12,6 +12,7 @@
 class Application
 {
 public:
+	// Util per no haver de passar per paràmetre la app --> és com una variable global, ja que només n'hi ha una i per tant tothom hi podrà accedir
 	static Application* instance;
 
 	//window
