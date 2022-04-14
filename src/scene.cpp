@@ -2,6 +2,7 @@
 #include "utils.h"
 
 #include "prefab.h"
+#include "light.h"
 #include "extra/cJSON.h"
 
 GTR::Scene* GTR::Scene::instance = NULL;
@@ -140,9 +141,6 @@ void GTR::BaseEntity::renderInMenu()
 #endif
 }
 
-
-
-
 GTR::PrefabEntity::PrefabEntity()
 {
 	entity_type = PREFAB;
@@ -172,3 +170,31 @@ void GTR::PrefabEntity::renderInMenu()
 #endif
 }
 
+//GTR::LightEntity::LightEntity()
+//{
+//	entity_type = LIGHT;
+//	light = NULL;
+//}
+//
+//void GTR::LightEntity::renderInMenu() {
+//	//First render the base menu
+//	BaseEntity::renderInMenu();
+//#ifndef SKIP_IMGUI
+//	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
+//	if (light && ImGui::TreeNode(light, "Light Info"))
+//	{
+//		//light->renderInMenu();
+//		ImGui::TreePop();
+//	}
+//#endif
+//
+//}
+//
+//void GTR::LightEntity::configure(cJSON* json)
+//{
+//	if (cJSON_GetObjectItem(json, "filename"))
+//	{
+//		filename = cJSON_GetObjectItem(json, "filename")->valuestring;
+//		light = GTR::Light::Get((std::string("data/") + filename).c_str());
+//	}
+//}

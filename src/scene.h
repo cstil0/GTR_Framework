@@ -25,6 +25,7 @@ namespace GTR {
 
 	class Scene;
 	class Prefab;
+	class Light;
 
 	//represents one element of the scene (could be lights, prefabs, cameras, etc)
 	class BaseEntity
@@ -52,6 +53,16 @@ namespace GTR {
 		virtual void renderInMenu();
 		virtual void configure(cJSON* json);
 	};
+
+	//class LightEntity : public GTR::BaseEntity {
+	//public:
+	//	std::string filename;
+	//	Light* light;
+
+	//	LightEntity();
+	//	virtual void renderInMenu();
+	//	virtual void configure(cJSON* json);
+	//};
 
 	//contains all entities of the scene
 	class Scene
