@@ -39,6 +39,23 @@ void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 	}
 }
 
+// To render the scene according to the render_calls vector
+void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
+	//set the clear color (the background color)
+	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
+
+	// Clear the color and the depth buffer
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	checkGLErrors();
+
+	//render entities
+	for (int i = 0; i < scene->entities.size(); ++i) {
+		// Instead of rendering the entities vector, render the render_calls vector
+		RenderCall* rc = scene->render_calls[i];
+		renderMeshWithMaterial(rc->model, rc->mesh, rc->material, camera);
+	}
+}
+
 //renders all the prefab
 void Renderer::renderPrefab(const Matrix44& model, GTR::Prefab* prefab, Camera* camera)
 {

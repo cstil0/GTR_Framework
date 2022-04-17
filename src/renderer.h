@@ -17,7 +17,7 @@ namespace GTR {
 	public:
 
 		//add here your functions
-		//...
+		void renderScene_RenderCalls(GTR::Scene* scene, Camera* camera);
 
 		//renders several elements of the scene
 		void renderScene(GTR::Scene* scene, Camera* camera);

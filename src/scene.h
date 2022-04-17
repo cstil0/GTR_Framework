@@ -64,6 +64,18 @@ namespace GTR {
 	//	virtual void configure(cJSON* json);
 	//};
 
+	class RenderCall {
+	public:
+		Mesh* mesh;
+		Material* material;
+		Matrix44 model;
+		int entity_type;
+		float distance_to_camera;
+
+		RenderCall() {}
+		virtual ~RenderCall() {}
+	};
+
 	//contains all entities of the scene
 	class Scene
 	{
@@ -81,12 +93,16 @@ namespace GTR {
 		// cualquier objeto hijo de esta clase. Para saber de qué tipo es cada uno, tenemos un enum dentro de la clase
 		// que nos lo chiva y de esta forma podemos hacer un cast y acceder a propiedades específicas de los hijos
 		std::vector<BaseEntity*> entities;
+		// Save only the visible nodes sorted by distance to the camera
+		std::vector<RenderCall*> render_calls;
 
 		void clear();
 		void addEntity(BaseEntity* entity);
 
 		bool load(const char* filename);
 		BaseEntity* createEntity(std::string type);
+		void createRenderCalls();
+		void sortRenderCalls();
 	};
 
 };

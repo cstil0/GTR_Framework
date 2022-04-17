@@ -131,6 +131,43 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
     return NULL;
 }
 
+void GTR::Scene::createRenderCalls()
+{
+	// Iterate the entities vector to save each node
+	for (int i = 0; i < entities.size(); ++i)
+	{
+		BaseEntity* ent = entities[i];
+
+		// Save only the visible nodes
+		if (!ent->visible)
+			continue;
+
+		// If prefab iterate the nodes
+		if (ent->entity_type == PREFAB)
+		{
+			PrefabEntity* pent = (GTR::PrefabEntity*)ent;
+			// First take the root node
+			if (pent->prefab) {
+				GTR::Node* root_node = &pent->prefab->root;
+				for (int j = 0; j < root_node->children.size(); ++j) {
+					GTR::Node* curr_node = root_node->children[j];
+					RenderCall rc;
+					Vector3 nodepos = curr_node->model.getTranslation();
+					rc.mesh = curr_node->mesh;
+					rc.material = curr_node->material;
+					rc.model = curr_node->model;
+					rc.distance_to_camera = nodepos.distance(main_camera.eye);
+					render_calls.push_back(rc);
+				}
+			}
+		}
+	}
+}
+void GTR::Scene::sortRenderCalls(){
+
+}
+}
+
 void GTR::BaseEntity::renderInMenu()
 {
 #ifndef SKIP_IMGUI
