@@ -48,6 +48,9 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkGLErrors();
 
+	// Sort the objects by distance to the camera
+	scene->sortRenderCalls();
+
 	//render entities
 	for (int i = 0; i < scene->entities.size(); ++i) {
 		// Instead of rendering the entities vector, render the render_calls vector

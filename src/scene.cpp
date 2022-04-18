@@ -5,6 +5,10 @@
 #include "light.h"
 #include "extra/cJSON.h"
 
+#include <iostream>
+#include <algorithm>
+#include <vector>    
+
 GTR::Scene* GTR::Scene::instance = NULL;
 
 GTR::Scene::Scene()
@@ -131,6 +135,27 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
     return NULL;
 }
 
+void GTR::Scene::addRenderCall_node(GTR::Node* node) {
+	RenderCall rc;
+	Vector3 nodepos = node->model.getTranslation();
+	rc.mesh = node->mesh;
+	rc.material = node->material;
+	rc.model = node->model;
+	rc.distance_to_camera = nodepos.distance(main_camera.eye);
+	render_calls.push_back(&rc);
+}
+
+//void GTR::Scene::addRenderCall_light(LightEntity* node) {
+//	RenderCall rc;
+//	Vector3 nodepos = curr_node->model.getTranslation();
+//	rc.mesh = curr_node->mesh;
+//	rc.material = curr_node->material;
+//	rc.model = curr_node->model;
+//	rc.distance_to_camera = nodepos.distance(main_camera.eye);
+//	render_calls.push_back(&rc);
+//}
+
+
 void GTR::Scene::createRenderCalls()
 {
 	// Iterate the entities vector to save each node
@@ -149,24 +174,41 @@ void GTR::Scene::createRenderCalls()
 			// First take the root node
 			if (pent->prefab) {
 				GTR::Node* root_node = &pent->prefab->root;
+				addRenderCall_node(root_node);
 				for (int j = 0; j < root_node->children.size(); ++j) {
 					GTR::Node* curr_node = root_node->children[j];
-					RenderCall rc;
-					Vector3 nodepos = curr_node->model.getTranslation();
-					rc.mesh = curr_node->mesh;
-					rc.material = curr_node->material;
-					rc.model = curr_node->model;
-					rc.distance_to_camera = nodepos.distance(main_camera.eye);
-					render_calls.push_back(rc);
+					addRenderCall_node(curr_node);
 				}
 			}
 		}
 	}
 }
-void GTR::Scene::sortRenderCalls(){
 
+void GTR::Scene::sortRenderCalls(){
+	Test t1 = Test();
+	Test t2 = Test();
+	Test t3 = Test();
+
+	t1.num = 10;
+	t2.num = 1;
+	t3.num = 32;
+
+	std::vector<Test> myvector;
+	myvector.push_back(t1);
+	myvector.push_back(t2);
+	myvector.push_back(t3);
+
+	std::sort(myvector.begin(), myvector.end());
+
+	// print out content:
+	std::cout << "\n myvector contains:";
+	for (int i = 0; i < myvector.size(); ++i) {
+		Test ti = myvector[i];
+		std::cout << ' ' << ti.num;
+	}
+	std::cout << '\n';
 }
-}
+
 
 void GTR::BaseEntity::renderInMenu()
 {

@@ -3,6 +3,7 @@
 
 #include "framework.h"
 #include "camera.h"
+#include "material.h"
 #include <string>
 
 //forward declaration
@@ -76,6 +77,23 @@ namespace GTR {
 		virtual ~RenderCall() {}
 	};
 
+	class Test {
+	public:
+		int num;
+		Test() {};
+
+		bool operator<(const  Test& other) //(1)
+		{
+			return num < other.num;
+		}
+
+
+		//bool compare(const Test& l, const Test& r) //(2)
+		//{
+		//	return l.num < r.num;
+		//}
+	};
+
 	//contains all entities of the scene
 	class Scene
 	{
@@ -101,8 +119,11 @@ namespace GTR {
 
 		bool load(const char* filename);
 		BaseEntity* createEntity(std::string type);
+
 		void createRenderCalls();
 		void sortRenderCalls();
+		void addRenderCall_node( GTR::Node* node);
+		//void addRenderCall_light(LightEntity* node);
 	};
 
 };
