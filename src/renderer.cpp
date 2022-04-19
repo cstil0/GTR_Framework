@@ -51,8 +51,8 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	// Sort the objects by distance to the camera
 	scene->sortRenderCalls();
 
-	//render entities
-	for (int i = 0; i < scene->entities.size(); ++i) {
+	//render rendercalls
+	for (int i = 0; i < scene->render_calls.size(); ++i) {
 		// Instead of rendering the entities vector, render the render_calls vector
 		RenderCall* rc = scene->render_calls[i];
 		renderMeshWithMaterial(rc->model, rc->mesh, rc->material, camera);

@@ -105,8 +105,10 @@ void Application::render(void)
 	//Matrix44 model;
 	//renderer->renderPrefab( model, prefab, camera );
 
+	// ANTIC RENDER
 	//renderer->renderScene(scene, camera);
 
+	// NOU RENDER
 	// Use the renderCalls function to render the scene with sorted objects
 	renderer->renderScene_RenderCalls(scene, camera);
 
@@ -122,6 +124,9 @@ void Application::render(void)
 
 void Application::update(double seconds_elapsed)
 {
+	// Create the vector of nodes to sort them
+	scene->createRenderCalls();
+
 	float speed = seconds_elapsed * cam_speed; //the speed is defined by the seconds_elapsed so it goes constant
 	float orbit_speed = seconds_elapsed * 0.5;
 	

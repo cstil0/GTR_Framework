@@ -135,14 +135,14 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
     return NULL;
 }
 
-void GTR::Scene::addRenderCall_node(GTR::Node* node) {
-	RenderCall rc;
+void GTR::Scene::addRenderCall_node(Node* node) {
+	RenderCall* rc = new RenderCall();
 	Vector3 nodepos = node->model.getTranslation();
-	rc.mesh = node->mesh;
-	rc.material = node->material;
-	rc.model = node->model;
-	rc.distance_to_camera = nodepos.distance(main_camera.eye);
-	render_calls.push_back(&rc);
+	rc->mesh = node->mesh;
+	rc->material = node->material;
+	rc->model = node->model;
+	rc->distance_to_camera = nodepos.distance(main_camera.eye);
+	render_calls.push_back(rc);
 }
 
 //void GTR::Scene::addRenderCall_light(LightEntity* node) {
@@ -158,6 +158,9 @@ void GTR::Scene::addRenderCall_node(GTR::Node* node) {
 
 void GTR::Scene::createRenderCalls()
 {
+	// PER SI FEM LO DE REPETIR LA FUNCIÓ A CADA UPDATE
+	render_calls.clear();
+
 	// Iterate the entities vector to save each node
 	for (int i = 0; i < entities.size(); ++i)
 	{
@@ -199,14 +202,6 @@ void GTR::Scene::sortRenderCalls(){
 	myvector.push_back(t3);
 
 	std::sort(myvector.begin(), myvector.end());
-
-	// print out content:
-	std::cout << "\n myvector contains:";
-	for (int i = 0; i < myvector.size(); ++i) {
-		Test ti = myvector[i];
-		std::cout << ' ' << ti.num;
-	}
-	std::cout << '\n';
 }
 
 

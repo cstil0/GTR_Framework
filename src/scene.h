@@ -27,6 +27,7 @@ namespace GTR {
 	class Scene;
 	class Prefab;
 	class Light;
+	class Node;
 
 	//represents one element of the scene (could be lights, prefabs, cameras, etc)
 	class BaseEntity
@@ -122,7 +123,7 @@ namespace GTR {
 
 		void createRenderCalls();
 		void sortRenderCalls();
-		void addRenderCall_node( GTR::Node* node);
+		void addRenderCall_node( Node* node);
 		//void addRenderCall_light(LightEntity* node);
 	};
 
