@@ -48,14 +48,32 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkGLErrors();
 
+	// Create the vector of nodes
+	scene->createRenderCalls();
+
 	// Sort the objects by distance to the camera
 	scene->sortRenderCalls();
 
 	//render rendercalls
 	for (int i = 0; i < scene->render_calls.size(); ++i) {
 		// Instead of rendering the entities vector, render the render_calls vector
-		RenderCall* rc = scene->render_calls[i];
-		renderMeshWithMaterial(rc->model, rc->mesh, rc->material, camera);
+		RenderCall rc = scene->render_calls[i];
+
+		//does this node have a mesh? then we must render it
+		if (rc.mesh && rc.material)
+		{
+			//compute the bounding box of the object in world space (by using the mesh bounding box transformed to world space)
+			BoundingBox world_bounding = transformBoundingBox(rc.model, rc.mesh->box);
+
+			//if bounding box is inside the camera frustum then the object is probably visible
+			if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
+			{
+				////compute global matrix
+				//Matrix44 node_model = node->getGlobalMatrix(true) * prefab_model;
+
+				renderMeshWithMaterial(rc.model, rc.mesh, rc.material, camera);
+			}
+		}
 	}
 }
 
@@ -141,6 +159,31 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	if (!shader)
 		return;
 	shader->enable();
+
+
+	// HI HA DUES MANERES DE COMPUTAR VARIES LLUMS:
+	// SINGLE PASS -- ENVIEM LA INFO DE TOTES LES LLUMS I AL SHADER FEM UN FOR PER RECORRER TOTES LES 
+	// LLUMS I ANAR SUMANT. EL QUE PASSA ÉS QUE S'HA DE DEFINIR UNA VARIABLE AMB EL MÀXIM DE LIGHTS
+	// MULTIPASS -- MÉS EFICIENT: PRINTEM L'OBJECTE TANTES VEGADES COM LLUMS TENIM. EL PROBLEMA ÉS QUE LLAVORS EL Z BUFFER DONA
+	// PROBLEMES DE MANERA QUE PRINTEM SI EL ZBUFFER TÉ UN OBJECTE A UNA DISTÀNCIA <= I FEM BLENDING NOMÉS A LA PRIMERA ITERACIÓ
+	// (EL FOR ARA ESTÀ AL RENDERER, NO AL SHADER)
+	
+	// Valor por defecto
+	glDepthFunc(GL_LESS);
+	// PINTAMOS SI EL VALOR QUE HAY EN EL DEPTH BUFFER ES MENOR O IGUAL AL QUE QUEREMOS PINTAR. ASÍ NO TENEMOS PROBLEMA CON PINTAR VARIAS VECES LA MESH
+	glDepthFunc(GL_LEQUAL);
+	glBlendFunc(GL_LEQUAL, GL_ONE); // LO SEGUNDO ES PARA HACER UNA INTERPOLACIÓN, pero no he acabado de entender por qué este tipo
+
+	// LA LUZ AMBIENTE SOLO DEBERÍA SUMARSE UNA VEZ!! POR LO TANTO DESPUÉS DE LA PRIMERA ITERACIÓN LA PONEMOS A CERO
+	//for (int i = 0; i < lights.size(); ++i) {
+		//// DESACTIVAMOS EL BLEND PARA LA PRIMERA LUZ -- PORR???
+		//if (i == 0) {
+		//	glDisable(GL_BLEND);
+		//}
+		//else
+		//	glEnable(GL_BLEND);
+		//// PASSEM ELS UNIFORMS DE LA LIGHT[I]
+	//}
 
 	//upload uniforms
 	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);

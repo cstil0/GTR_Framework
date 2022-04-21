@@ -16,10 +16,12 @@ public:
 	std::string name;
 	bool visible;
 
+	// ME ESTOY LIANDO DE SI LAS VARIABLES VAN AQUÍ O EN SCENE
 	Matrix44 model;
 	int type;
 	float intensity;
 	vec3 color;
+	// PARA LA ATENUACIÓN, HAY QUE TENERLO EN CUENTA EN EL SHADER
 	float max_distance;
 	float cone_angle;
 	float cone_exp;

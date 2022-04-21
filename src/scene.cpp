@@ -55,6 +55,8 @@ bool GTR::Scene::load(const char* filename)
 	}
 
 	//read global properties
+	// SE REPTE LA VARIABLE DENTRO DE LA FUNCIÓN POR QUÉ SI NO ENCUENTRA ESE VALOR EN EL JSON
+	// LE ASIGNA EL QUE YA TENÍA -- ES UN PEQUEÑO HACK
 	background_color = readJSONVector3(json, "background_color", background_color);
 	ambient_light = readJSONVector3(json, "ambient_light", ambient_light );
 	main_camera.eye = readJSONVector3(json, "camera_position", main_camera.eye);
@@ -77,6 +79,8 @@ bool GTR::Scene::load(const char* filename)
 
 		addEntity(ent);
 
+
+		// PROPIEDAES GENÉRICAS DE TODAS LAS ENTIDADES
 		if (cJSON_GetObjectItem(entity_json, "name"))
 		{
 			ent->name = cJSON_GetObjectItem(entity_json, "name")->valuestring;
@@ -132,17 +136,40 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 {
 	if (type == "PREFAB")
 		return new GTR::PrefabEntity();
+	// SI ES UNA LIGHT PUES CREAMOS UN NODO LIGHT
     return NULL;
 }
 
-void GTR::Scene::addRenderCall_node(Node* node) {
-	RenderCall* rc = new RenderCall();
-	Vector3 nodepos = node->model.getTranslation();
-	rc->mesh = node->mesh;
-	rc->material = node->material;
-	rc->model = node->model;
-	rc->distance_to_camera = nodepos.distance(main_camera.eye);
-	render_calls.push_back(rc);
+void GTR::Scene::addRenderCall_node(Node* node, Matrix44 curr_model, Matrix44 root_model) {
+	// If the node doesn't have mesh or material we do not add it
+	if (node->material || node->mesh) {
+		RenderCall rc;
+		Vector3 nodepos = curr_model.getTranslation();
+		rc.mesh = node->mesh;
+		rc.material = node->material;
+		rc.model = curr_model;
+
+		rc.distance_to_camera = nodepos.distance(main_camera.eye);
+		// If the material is opaque add a distance factor to sort it at the end of the vector
+		if (rc.material) {
+			if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
+			{
+				int dist_factor = 1000000;
+				rc.distance_to_camera += dist_factor;
+			}
+
+		}
+		render_calls.push_back(rc);
+	}
+
+
+	// Add also all the childrens from this node
+	for (int j = 0; j < node->children.size(); ++j) {
+		GTR::Node* curr_node = node->children[j];
+		// Compute global matrix
+		Matrix44 node_model = node->getGlobalMatrix(true) * root_model;
+		addRenderCall_node(curr_node, node_model, root_model);
+	}
 }
 
 //void GTR::Scene::addRenderCall_light(LightEntity* node) {
@@ -155,7 +182,7 @@ void GTR::Scene::addRenderCall_node(Node* node) {
 //	render_calls.push_back(&rc);
 //}
 
-
+// AIXÒ S'HA DE FER AL RENDERER!
 void GTR::Scene::createRenderCalls()
 {
 	// PER SI FEM LO DE REPETIR LA FUNCIÓ A CADA UPDATE
@@ -176,32 +203,39 @@ void GTR::Scene::createRenderCalls()
 			PrefabEntity* pent = (GTR::PrefabEntity*)ent;
 			// First take the root node
 			if (pent->prefab) {
-				GTR::Node* root_node = &pent->prefab->root;
-				addRenderCall_node(root_node);
-				for (int j = 0; j < root_node->children.size(); ++j) {
-					GTR::Node* curr_node = root_node->children[j];
-					addRenderCall_node(curr_node);
-				}
+				GTR::Node* curr_node = &pent->prefab->root;
+				// Compute global matrix
+				Matrix44 node_model = curr_node->getGlobalMatrix(true) * ent->model;
+				// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
+				addRenderCall_node(curr_node, node_model, ent->model);
 			}
 		}
 	}
 }
 
 void GTR::Scene::sortRenderCalls(){
-	Test t1 = Test();
-	Test t2 = Test();
-	Test t3 = Test();
+	std::vector<RenderCall> rc_test;
+	RenderCall rc1;
+	rc1.distance_to_camera = 10;
+	rc_test.push_back(rc1);
 
-	t1.num = 10;
-	t2.num = 1;
-	t3.num = 32;
+	RenderCall rc2;
+	rc2.distance_to_camera = 1;
+	rc_test.push_back(rc2);
 
-	std::vector<Test> myvector;
-	myvector.push_back(t1);
-	myvector.push_back(t2);
-	myvector.push_back(t3);
+	RenderCall rc3;
+	rc3.distance_to_camera = 5;
+	rc_test.push_back(rc3);
 
-	std::sort(myvector.begin(), myvector.end());
+	RenderCall rc4;
+	rc4.distance_to_camera = -3;
+	rc_test.push_back(rc4);
+
+	RenderCall rc5;
+	rc5.distance_to_camera = 20;
+	rc_test.push_back(rc5);
+
+	std::sort(render_calls.begin(), render_calls.end(), compare_distances);
 }
 
 
@@ -248,6 +282,8 @@ void GTR::PrefabEntity::renderInMenu()
 //{
 //	entity_type = LIGHT;
 //	light = NULL;
+//	color.set(1, 1, 1);
+//	intensity = 1;
 //}
 //
 //void GTR::LightEntity::renderInMenu() {
@@ -260,15 +296,21 @@ void GTR::PrefabEntity::renderInMenu()
 //		//light->renderInMenu();
 //		ImGui::TreePop();
 //	}
+//
+//	// AQUÍ HA FET ALGO QUE DIU QUE ERA PER DEBUGAR AMB UN SWITCH --- NO M'HE ENTERAT BÉ
 //#endif
 //
 //}
-//
+
 //void GTR::LightEntity::configure(cJSON* json)
 //{
 //	if (cJSON_GetObjectItem(json, "filename"))
 //	{
-//		filename = cJSON_GetObjectItem(json, "filename")->valuestring;
-//		light = GTR::Light::Get((std::string("data/") + filename).c_str());
+//		// Read parameters
+//		color = readJSONVector3(json, 'color', color);
+//		// FALTEN LA RESTA DE PARÀMETRES
+//		std::string str = readJSONString(json, 'light_type', '');
+//		if (str == 'POINT')
+//			light_type = eLightType::POINT;
 //	}
 //}

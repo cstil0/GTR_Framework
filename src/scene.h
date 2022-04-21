@@ -24,6 +24,12 @@ namespace GTR {
 		DECALL = 5
 	};
 
+	enum eLightType {
+		DIRECTIONAL,
+		POINT,
+		SPOTLIGHT
+	};
+
 	class Scene;
 	class Prefab;
 	class Light;
@@ -40,6 +46,7 @@ namespace GTR {
 		bool visible;
 		BaseEntity() { entity_type = NONE; visible = true; }
 		virtual ~BaseEntity() {}
+		// VIRTUAL NOS INDICA QUE ESTA FUNCIÓN CAMBIARÁ DEPENDIENDO DE LA HERENCIA
 		virtual void renderInMenu();
 		virtual void configure(cJSON* json) {}
 	};
@@ -60,6 +67,11 @@ namespace GTR {
 	//public:
 	//	std::string filename;
 	//	Light* light;
+	//	Vector3 color;
+	//	float intensity;
+	//	// PARA LA ATENUACIÓN -- HAY QUE TENERLO EN CUENTA EN EL SHADER
+	//	// ES MEJOR UNA ATENUACIÓN QUADRÁTICA YA QUE ES MÁS NATURAL QUE UNA LINEAL POR LA FORMA DE LA CURVA
+	//	float max_distance;
 
 	//	LightEntity();
 	//	virtual void renderInMenu();
@@ -71,28 +83,22 @@ namespace GTR {
 		Mesh* mesh;
 		Material* material;
 		Matrix44 model;
-		int entity_type;
+		// A LOS QUE SEAN OPACOS LES SUMAMOS UN FACTOR MUY GRANDE PARA QUE SEQUEDEN AL FINAL
 		float distance_to_camera;
 
 		RenderCall() {}
 		virtual ~RenderCall() {}
-	};
 
-	class Test {
-	public:
-		int num;
-		Test() {};
-
-		bool operator<(const  Test& other) //(1)
+		// Operator to compare the distance and sort the renderCalls vector
+		bool operator>(const  RenderCall& other) //(1)
 		{
-			return num < other.num;
+			return distance_to_camera > other.distance_to_camera;
 		}
 
-
-		//bool compare(const Test& l, const Test& r) //(2)
-		//{
-		//	return l.num < r.num;
-		//}
+		
+		struct myclass {
+			bool operator() (RenderCall rc1, RenderCall rc2) { return (rc1.distance_to_camera < rc2.distance_to_camera); }
+		} myobject;
 	};
 
 	//contains all entities of the scene
@@ -113,7 +119,8 @@ namespace GTR {
 		// que nos lo chiva y de esta forma podemos hacer un cast y acceder a propiedades específicas de los hijos
 		std::vector<BaseEntity*> entities;
 		// Save only the visible nodes sorted by distance to the camera
-		std::vector<RenderCall*> render_calls;
+		// NOT SAVING A POINTER SINCE THEN IT CANNOT BE SORTED CORRECTLY
+		std::vector<RenderCall> render_calls;
 
 		void clear();
 		void addEntity(BaseEntity* entity);
@@ -123,8 +130,11 @@ namespace GTR {
 
 		void createRenderCalls();
 		void sortRenderCalls();
-		void addRenderCall_node( Node* node);
+		void addRenderCall_node( Node* node, Matrix44 curr_model, Matrix44 parent_model);
 		//void addRenderCall_light(LightEntity* node);
+
+		static bool compare_distances(RenderCall rc1, RenderCall rc2) { return (rc1.distance_to_camera < rc2.distance_to_camera); }
+
 	};
 
 };

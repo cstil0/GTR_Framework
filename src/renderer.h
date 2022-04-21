@@ -16,6 +16,8 @@ namespace GTR {
 
 	public:
 
+		//std::vector<LightEntity*> lights; // PARA TENER PRECALCULADAS LAS LUCES Y NO TENER QUE HACERLO EN CADA RENDER, PERO NO HE ENTENDIDO POR QUÉ
+
 		//add here your functions
 		void renderScene_RenderCalls(GTR::Scene* scene, Camera* camera);
 
