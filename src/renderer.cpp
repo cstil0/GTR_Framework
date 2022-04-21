@@ -10,6 +10,10 @@
 #include "scene.h"
 #include "extra/hdre.h"
 
+#include <iostream>
+#include <algorithm>
+#include <vector>  
+
 
 using namespace GTR;
 
@@ -49,15 +53,15 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	checkGLErrors();
 
 	// Create the vector of nodes
-	scene->createRenderCalls();
+	createRenderCalls(scene);
 
 	// Sort the objects by distance to the camera
-	scene->sortRenderCalls();
+	sortRenderCalls();
 
 	//render rendercalls
-	for (int i = 0; i < scene->render_calls.size(); ++i) {
+	for (int i = 0; i < render_calls.size(); ++i) {
 		// Instead of rendering the entities vector, render the render_calls vector
-		RenderCall rc = scene->render_calls[i];
+		RenderCall rc = render_calls[i];
 
 		//does this node have a mesh? then we must render it
 		if (rc.mesh && rc.material)
@@ -235,4 +239,71 @@ Texture* GTR::CubemapFromHDRE(const char* filename)
 					(Uint8**)hdre->getFacesh(i), GL_RGBA16F, i);
 		}
 	return texture;
+}
+
+void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Node* node, Matrix44 curr_model, Matrix44 root_model) {
+	// If the node doesn't have mesh or material we do not add it
+	if (node->material || node->mesh) {
+		RenderCall rc;
+		Vector3 nodepos = curr_model.getTranslation();
+		rc.mesh = node->mesh;
+		rc.material = node->material;
+		rc.model = curr_model;
+
+		rc.distance_to_camera = nodepos.distance(scene->main_camera.eye);
+		// If the material is opaque add a distance factor to sort it at the end of the vector
+		if (rc.material) {
+			if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
+			{
+				int dist_factor = 1000000;
+				rc.distance_to_camera += dist_factor;
+			}
+
+		}
+		render_calls.push_back(rc);
+	}
+
+
+	// Add also all the childrens from this node
+	for (int j = 0; j < node->children.size(); ++j) {
+		GTR::Node* curr_node = node->children[j];
+		// Compute global matrix
+		Matrix44 node_model = node->getGlobalMatrix(true) * root_model;
+		addRenderCall_node(scene, curr_node, node_model, root_model);
+	}
+}
+
+// AIXÒ S'HA DE FER AL RENDERER!
+void GTR::Renderer::createRenderCalls(GTR::Scene* scene)
+{
+	// PER SI FEM LO DE REPETIR LA FUNCIÓ A CADA UPDATE
+	render_calls.clear();
+
+	// Iterate the entities vector to save each node
+	for (int i = 0; i < scene->entities.size(); ++i)
+	{
+		BaseEntity* ent = scene->entities[i];
+
+		// Save only the visible nodes
+		if (!ent->visible)
+			continue;
+
+		// If prefab iterate the nodes
+		if (ent->entity_type == PREFAB)
+		{
+			PrefabEntity* pent = (GTR::PrefabEntity*)ent;
+			// First take the root node
+			if (pent->prefab) {
+				GTR::Node* curr_node = &pent->prefab->root;
+				// Compute global matrix
+				Matrix44 node_model = curr_node->getGlobalMatrix(true) * ent->model;
+				// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
+				addRenderCall_node(scene, curr_node, node_model, ent->model);
+			}
+		}
+	}
+}
+
+void GTR::Renderer::sortRenderCalls() {
+	std::sort(render_calls.begin(), render_calls.end(), compare_distances);
 }

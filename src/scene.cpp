@@ -4,10 +4,7 @@
 #include "prefab.h"
 #include "light.h"
 #include "extra/cJSON.h"
-
-#include <iostream>
-#include <algorithm>
-#include <vector>    
+  
 
 GTR::Scene* GTR::Scene::instance = NULL;
 
@@ -140,37 +137,6 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
     return NULL;
 }
 
-void GTR::Scene::addRenderCall_node(Node* node, Matrix44 curr_model, Matrix44 root_model) {
-	// If the node doesn't have mesh or material we do not add it
-	if (node->material || node->mesh) {
-		RenderCall rc;
-		Vector3 nodepos = curr_model.getTranslation();
-		rc.mesh = node->mesh;
-		rc.material = node->material;
-		rc.model = curr_model;
-
-		rc.distance_to_camera = nodepos.distance(main_camera.eye);
-		// If the material is opaque add a distance factor to sort it at the end of the vector
-		if (rc.material) {
-			if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
-			{
-				int dist_factor = 1000000;
-				rc.distance_to_camera += dist_factor;
-			}
-
-		}
-		render_calls.push_back(rc);
-	}
-
-
-	// Add also all the childrens from this node
-	for (int j = 0; j < node->children.size(); ++j) {
-		GTR::Node* curr_node = node->children[j];
-		// Compute global matrix
-		Matrix44 node_model = node->getGlobalMatrix(true) * root_model;
-		addRenderCall_node(curr_node, node_model, root_model);
-	}
-}
 
 //void GTR::Scene::addRenderCall_light(LightEntity* node) {
 //	RenderCall rc;
@@ -181,62 +147,6 @@ void GTR::Scene::addRenderCall_node(Node* node, Matrix44 curr_model, Matrix44 ro
 //	rc.distance_to_camera = nodepos.distance(main_camera.eye);
 //	render_calls.push_back(&rc);
 //}
-
-// AIXÒ S'HA DE FER AL RENDERER!
-void GTR::Scene::createRenderCalls()
-{
-	// PER SI FEM LO DE REPETIR LA FUNCIÓ A CADA UPDATE
-	render_calls.clear();
-
-	// Iterate the entities vector to save each node
-	for (int i = 0; i < entities.size(); ++i)
-	{
-		BaseEntity* ent = entities[i];
-
-		// Save only the visible nodes
-		if (!ent->visible)
-			continue;
-
-		// If prefab iterate the nodes
-		if (ent->entity_type == PREFAB)
-		{
-			PrefabEntity* pent = (GTR::PrefabEntity*)ent;
-			// First take the root node
-			if (pent->prefab) {
-				GTR::Node* curr_node = &pent->prefab->root;
-				// Compute global matrix
-				Matrix44 node_model = curr_node->getGlobalMatrix(true) * ent->model;
-				// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
-				addRenderCall_node(curr_node, node_model, ent->model);
-			}
-		}
-	}
-}
-
-void GTR::Scene::sortRenderCalls(){
-	std::vector<RenderCall> rc_test;
-	RenderCall rc1;
-	rc1.distance_to_camera = 10;
-	rc_test.push_back(rc1);
-
-	RenderCall rc2;
-	rc2.distance_to_camera = 1;
-	rc_test.push_back(rc2);
-
-	RenderCall rc3;
-	rc3.distance_to_camera = 5;
-	rc_test.push_back(rc3);
-
-	RenderCall rc4;
-	rc4.distance_to_camera = -3;
-	rc_test.push_back(rc4);
-
-	RenderCall rc5;
-	rc5.distance_to_camera = 20;
-	rc_test.push_back(rc5);
-
-	std::sort(render_calls.begin(), render_calls.end(), compare_distances);
-}
 
 
 void GTR::BaseEntity::renderInMenu()
