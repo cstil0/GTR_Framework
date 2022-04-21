@@ -63,20 +63,32 @@ namespace GTR {
 		virtual void configure(cJSON* json);
 	};
 
-	//class LightEntity : public GTR::BaseEntity {
-	//public:
-	//	std::string filename;
-	//	Light* light;
-	//	Vector3 color;
-	//	float intensity;
-	//	// PARA LA ATENUACIÓN -- HAY QUE TENERLO EN CUENTA EN EL SHADER
-	//	// ES MEJOR UNA ATENUACIÓN QUADRÁTICA YA QUE ES MÁS NATURAL QUE UNA LINEAL POR LA FORMA DE LA CURVA
-	//	float max_distance;
+	class LightEntity : public GTR::BaseEntity {
+	public:
+		enum eTypeOfLight {
+			NONE,
+			POINT,
+			SPOT,
+			DIRECTIONAL
+		};
 
-	//	LightEntity();
-	//	virtual void renderInMenu();
-	//	virtual void configure(cJSON* json);
-	//};
+		std::string filename;
+		//Light* light;
+		Vector3 color;
+		float intensity;
+		int light_type;
+
+		// PARA LA ATENUACIÓN -- HAY QUE TENERLO EN CUENTA EN EL SHADER
+		// ES MEJOR UNA ATENUACIÓN QUADRÁTICA YA QUE ES MÁS NATURAL QUE UNA LINEAL POR LA FORMA DE LA CURVA
+		float max_distance;
+		float cone_angle;
+		float cone_exp;
+		float area_size;
+
+		LightEntity();
+		virtual void renderInMenu();
+		virtual void configure(cJSON* json);
+	};
 
 	//contains all entities of the scene
 	class Scene

@@ -44,6 +44,7 @@ void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 }
 
 // To render the scene according to the render_calls vector
+// L'ESCENA NO S'HAURIA DE PASSAR
 void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	//set the clear color (the background color)
 	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
@@ -52,8 +53,18 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkGLErrors();
 
+	//// Create the lights vector
+	//lights.clear();
+	//for (int i = 0; i < scene->entities.size(); i++){
+	//	BaseEntity* ent = scene->entities[i];
+	//	if (ent->entity_type == GTR::eEntityType::LIGHT) {
+	//		LightEntity* light = (LightEntity*)ent;
+	//		lights.push_back(light);
+	//	}
+	//}
+
 	// Create the vector of nodes
-	createRenderCalls(scene);
+	createRenderCalls(scene, camera);
 
 	// Sort the objects by distance to the camera
 	sortRenderCalls();
@@ -64,20 +75,20 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 		RenderCall rc = render_calls[i];
 
 		//does this node have a mesh? then we must render it
-		if (rc.mesh && rc.material)
-		{
+		//if (rc.mesh && rc.material)
+		//{
 			//compute the bounding box of the object in world space (by using the mesh bounding box transformed to world space)
-			BoundingBox world_bounding = transformBoundingBox(rc.model, rc.mesh->box);
+		//BoundingBox world_bounding = transformBoundingBox(rc.model, rc.mesh->box);
 
 			//if bounding box is inside the camera frustum then the object is probably visible
-			if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
-			{
+			//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
+			//{
 				////compute global matrix
 				//Matrix44 node_model = node->getGlobalMatrix(true) * prefab_model;
 
-				renderMeshWithMaterial(rc.model, rc.mesh, rc.material, camera);
-			}
-		}
+		renderMeshWithMaterial(rc.model, rc.mesh, rc.material, camera);
+			//}
+		//}
 	}
 }
 
@@ -176,7 +187,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	glDepthFunc(GL_LESS);
 	// PINTAMOS SI EL VALOR QUE HAY EN EL DEPTH BUFFER ES MENOR O IGUAL AL QUE QUEREMOS PINTAR. ASÍ NO TENEMOS PROBLEMA CON PINTAR VARIAS VECES LA MESH
 	glDepthFunc(GL_LEQUAL);
-	glBlendFunc(GL_LEQUAL, GL_ONE); // LO SEGUNDO ES PARA HACER UNA INTERPOLACIÓN, pero no he acabado de entender por qué este tipo
+	//glBlendFunc(GL_LEQUAL, GL_ONE); // LO SEGUNDO ES PARA HACER UNA INTERPOLACIÓN, pero no he acabado de entender por qué este tipo
 
 	// LA LUZ AMBIENTE SOLO DEBERÍA SUMARSE UNA VEZ!! POR LO TANTO DESPUÉS DE LA PRIMERA ITERACIÓN LA PONEMOS A CERO
 	//for (int i = 0; i < lights.size(); ++i) {
@@ -203,6 +214,12 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//this is used to say which is the alpha threshold to what we should not paint a pixel on the screen (to cut polygons according to texture alpha)
 	shader->setUniform("u_alpha_cutoff", material->alpha_mode == GTR::eAlphaMode::MASK ? material->alpha_cutoff : 0);
 
+
+	// Light parameters
+	//shader->setUniform("u_light_color", lights[0]->color);
+	//shader->setUniform("u_intensity", lights[0]->intensity);
+	//shader->setUniform("u_max_distance", lights[0]->max_distance);
+
 	//do the draw call that renders the mesh into the screen
 	mesh->render(GL_TRIANGLES);
 
@@ -212,7 +229,6 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//set the render state as it was before to avoid problems with future renders
 	glDisable(GL_BLEND);
 }
-
 
 Texture* GTR::CubemapFromHDRE(const char* filename)
 {
@@ -241,27 +257,31 @@ Texture* GTR::CubemapFromHDRE(const char* filename)
 	return texture;
 }
 
-void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Node* node, Matrix44 curr_model, Matrix44 root_model) {
+void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Camera* camera, Node* node, Matrix44 curr_model, Matrix44 root_model) {
+	RenderCall rc;
 	// If the node doesn't have mesh or material we do not add it
-	if (node->material || node->mesh) {
-		RenderCall rc;
+
+	if (node->material && node->mesh) {
+		BoundingBox world_bounding;
+		// If the node is parent it will not have any mesh but we want to add it
+		world_bounding = transformBoundingBox(curr_model, node->mesh->box);
+		//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize)) {
 		Vector3 nodepos = curr_model.getTranslation();
 		rc.mesh = node->mesh;
 		rc.material = node->material;
 		rc.model = curr_model;
-
 		rc.distance_to_camera = nodepos.distance(scene->main_camera.eye);
 		// If the material is opaque add a distance factor to sort it at the end of the vector
-		if (rc.material) {
-			if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
-			{
-				int dist_factor = 1000000;
-				rc.distance_to_camera += dist_factor;
-			}
-
+		if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
+		{
+			int dist_factor = 1000000;
+			rc.distance_to_camera += dist_factor;
 		}
+			
 		render_calls.push_back(rc);
+		//}
 	}
+
 
 
 	// Add also all the childrens from this node
@@ -269,14 +289,13 @@ void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Node* node, Matrix44 c
 		GTR::Node* curr_node = node->children[j];
 		// Compute global matrix
 		Matrix44 node_model = node->getGlobalMatrix(true) * root_model;
-		addRenderCall_node(scene, curr_node, node_model, root_model);
+		addRenderCall_node(scene, camera, curr_node, node_model, root_model);
 	}
 }
 
 // AIXÒ S'HA DE FER AL RENDERER!
-void GTR::Renderer::createRenderCalls(GTR::Scene* scene)
+void GTR::Renderer::createRenderCalls(GTR::Scene* scene, Camera* camera)
 {
-	// PER SI FEM LO DE REPETIR LA FUNCIÓ A CADA UPDATE
 	render_calls.clear();
 
 	// Iterate the entities vector to save each node
@@ -295,10 +314,26 @@ void GTR::Renderer::createRenderCalls(GTR::Scene* scene)
 			// First take the root node
 			if (pent->prefab) {
 				GTR::Node* curr_node = &pent->prefab->root;
-				// Compute global matrix
+				//compute the bounding box of the object in world space (by using the mesh bounding box transformed to world space)
+				//BoundingBox world_bounding = transformBoundingBox(rc.model, rc.mesh->box);
+
+					//if bounding box is inside the camera frustum then the object is probably visible
+					//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
+					//{
+						////compute global matrix
+						//Matrix44 node_model = node->getGlobalMatrix(true) * prefab_model;
 				Matrix44 node_model = curr_node->getGlobalMatrix(true) * ent->model;
-				// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
-				addRenderCall_node(scene, curr_node, node_model, ent->model);
+
+				//BoundingBox world_bounding;
+				//// If the node is parent it will not have any mesh but we want to add it
+				//if (curr_node->mesh)
+				//	world_bounding = transformBoundingBox(ent->model, curr_node->mesh->box);
+				//	
+				//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
+				//{
+					// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
+				addRenderCall_node(scene, camera, curr_node, node_model, ent->model);
+				//}
 			}
 		}
 	}

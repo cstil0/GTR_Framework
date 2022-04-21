@@ -133,20 +133,12 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 {
 	if (type == "PREFAB")
 		return new GTR::PrefabEntity();
-	// SI ES UNA LIGHT PUES CREAMOS UN NODO LIGHT
-    return NULL;
+
+	if (type == "LIGHT")
+		return new GTR::LightEntity();
+
+	return NULL;
 }
-
-
-//void GTR::Scene::addRenderCall_light(LightEntity* node) {
-//	RenderCall rc;
-//	Vector3 nodepos = curr_node->model.getTranslation();
-//	rc.mesh = curr_node->mesh;
-//	rc.material = curr_node->material;
-//	rc.model = curr_node->model;
-//	rc.distance_to_camera = nodepos.distance(main_camera.eye);
-//	render_calls.push_back(&rc);
-//}
 
 
 void GTR::BaseEntity::renderInMenu()
@@ -188,39 +180,50 @@ void GTR::PrefabEntity::renderInMenu()
 #endif
 }
 
-//GTR::LightEntity::LightEntity()
-//{
-//	entity_type = LIGHT;
-//	light = NULL;
-//	color.set(1, 1, 1);
-//	intensity = 1;
-//}
-//
-//void GTR::LightEntity::renderInMenu() {
-//	//First render the base menu
-//	BaseEntity::renderInMenu();
-//#ifndef SKIP_IMGUI
-//	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
-//	if (light && ImGui::TreeNode(light, "Light Info"))
-//	{
-//		//light->renderInMenu();
-//		ImGui::TreePop();
-//	}
-//
-//	// AQUÍ HA FET ALGO QUE DIU QUE ERA PER DEBUGAR AMB UN SWITCH --- NO M'HE ENTERAT BÉ
-//#endif
-//
-//}
+GTR::LightEntity::LightEntity()
+{
+	entity_type = LIGHT;
+	//light = NULL;
+	color.set(1, 1, 1);
+	intensity = 1;
+	max_distance = 100;
+	// A DETERMINAR
+	cone_angle;
+	cone_exp;
+	area_size;
+}
 
-//void GTR::LightEntity::configure(cJSON* json)
-//{
-//	if (cJSON_GetObjectItem(json, "filename"))
-//	{
-//		// Read parameters
-//		color = readJSONVector3(json, 'color', color);
-//		// FALTEN LA RESTA DE PARÀMETRES
-//		std::string str = readJSONString(json, 'light_type', '');
-//		if (str == 'POINT')
-//			light_type = eLightType::POINT;
-//	}
-//}
+void GTR::LightEntity::renderInMenu() {
+	//First render the base menu
+	BaseEntity::renderInMenu();
+#ifndef SKIP_IMGUI
+	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
+	//if (ImGui::TreeNode(light, "Light Info"))
+	//{
+	//	//light->renderInMenu();
+	//	ImGui::TreePop();
+	//}
+
+	// AQUÍ HA FET ALGO QUE DIU QUE ERA PER DEBUGAR AMB UN SWITCH --- NO M'HE ENTERAT BÉ
+#endif
+
+}
+
+void GTR::LightEntity::configure(cJSON* json)
+{
+	// Read parameters
+	color = readJSONVector3(json, "color", color);
+	intensity = readJSONNumber(json, "intensity", intensity);
+	std::string str = readJSONString(json, "light_type", "");
+	if (str == "POINT")
+		light_type = eTypeOfLight::POINT;
+	else if (str == "SPOT")
+		light_type = eTypeOfLight::SPOT;
+	else if (str == "DIRECTIONAL")
+		light_type = eTypeOfLight::DIRECTIONAL;
+	else
+		light_type = eTypeOfLight::NONE;
+
+	area_size = readJSONNumber(json, "area_size", area_size);
+	max_distance = readJSONNumber(json, "max_dist", max_distance);
+}

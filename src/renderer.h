@@ -25,6 +25,7 @@ namespace GTR {
 	// Separating the render from anything else makes the code cleaner
 	class Renderer
 	{
+		std::vector<LightEntity*> lights;
 
 	public:
 		// Save only the visible nodes sorted by distance to the camera
@@ -49,12 +50,12 @@ namespace GTR {
 		void renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
 	
 		// Functions to manage the rendercalls vector
-		void createRenderCalls(GTR::Scene* scene);
+		void createRenderCalls(GTR::Scene* scene, Camera* camera);
 		void sortRenderCalls();
-		void addRenderCall_node(GTR::Scene* scene, Node* node, Matrix44 curr_model, Matrix44 parent_model);
+		void addRenderCall_node(GTR::Scene* scene, Camera* camera, Node* node, Matrix44 curr_model, Matrix44 parent_model);
 		//void addRenderCall_light(LightEntity* node);
 
-		static bool compare_distances(RenderCall rc1, RenderCall rc2) { return (rc1.distance_to_camera < rc2.distance_to_camera); }
+		static bool compare_distances(const RenderCall rc1, const RenderCall rc2) { return (rc1.distance_to_camera < rc2.distance_to_camera); }
 	
 	};
 

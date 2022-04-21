@@ -728,7 +728,9 @@ void Shader::setMatrix44(const char* varname, const float* m)
 void Shader::setMatrix44( const char* varname, const Matrix44 &m )
 {
 	GLint loc = getLocation(varname, &locations);
+	assert(glGetError() == GL_NO_ERROR);
 	CHECK_SHADER_VAR(loc,varname);
+	assert(glGetError() == GL_NO_ERROR);
 	glUniformMatrix4fv(loc, 1, GL_FALSE, m.m);
 	assert (glGetError() == GL_NO_ERROR);
 }
