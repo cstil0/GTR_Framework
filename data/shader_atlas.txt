@@ -1,6 +1,7 @@
 //example of some shaders compiled
 flat basic.vs flat.fs
 texture basic.vs texture.fs
+light basic.vs light.fs
 depth quad.vs depth.fs
 multi basic.vs multi.fs
 
@@ -90,6 +91,8 @@ uniform sampler2D u_texture;
 uniform float u_time;
 uniform float u_alpha_cutoff;
 
+
+
 out vec4 FragColor;
 
 void main()
@@ -105,7 +108,7 @@ void main()
 }
 
 // AQUEST SHADER S'HA DE PROGRAMAR PER LES LLUMS
-\singlelight.fs
+\light.fs
 
 #version 330 core
 
@@ -120,6 +123,13 @@ uniform sampler2D u_texture;
 uniform float u_time;
 uniform float u_alpha_cutoff;
 
+// Light parameters
+uniform vec3 u_ambient_light;
+uniform vec3 u_light_position;
+uniform vec3 u_light_color;
+uniform float u_intensity;
+uniform float u_max_distance;
+
 out vec4 FragColor;
 
 void main()
@@ -130,6 +140,15 @@ void main()
 
 	if(color.a < u_alpha_cutoff)
 		discard;
+
+	vec3 light = vec3(u_ambient_light);
+
+	vec3 L = normalize(u_light_position - v_world_position);
+	vec3 N = normalize(v_normal);
+	float NdotL = clamp(dot(L,N), 0.0, 1.0);
+	light += u_light_color * NdotL;
+
+	color.xyz *= light;
 
 	FragColor = color;
 }

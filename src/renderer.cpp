@@ -53,15 +53,15 @@ void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkGLErrors();
 
-	//// Create the lights vector
-	//lights.clear();
-	//for (int i = 0; i < scene->entities.size(); i++){
-	//	BaseEntity* ent = scene->entities[i];
-	//	if (ent->entity_type == GTR::eEntityType::LIGHT) {
-	//		LightEntity* light = (LightEntity*)ent;
-	//		lights.push_back(light);
-	//	}
-	//}
+	// Create the lights vector
+	lights.clear();
+	for (int i = 0; i < scene->entities.size(); i++){
+		BaseEntity* ent = scene->entities[i];
+		if (ent->entity_type == GTR::eEntityType::LIGHT) {
+			LightEntity* light = (LightEntity*)ent;
+			lights.push_back(light);
+		}
+	}
 
 	// Create the vector of nodes
 	createRenderCalls(scene, camera);
@@ -166,7 +166,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
     assert(glGetError() == GL_NO_ERROR);
 
 	//chose a shader
-	shader = Shader::Get("texture");
+	shader = Shader::Get("light");
 
     assert(glGetError() == GL_NO_ERROR);
 
@@ -216,9 +216,12 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 
 	// Light parameters
-	//shader->setUniform("u_light_color", lights[0]->color);
-	//shader->setUniform("u_intensity", lights[0]->intensity);
-	//shader->setUniform("u_max_distance", lights[0]->max_distance);
+	Scene* scene = Scene::instance;
+	shader->setUniform("u_ambient_light", scene->ambient_light);
+	shader->setUniform("u_light_position", lights[0]->model.getTranslation());
+	shader->setUniform("u_light_color", lights[0]->color);
+	shader->setUniform("u_intensity", lights[0]->intensity);
+	shader->setUniform("u_max_distance", lights[0]->max_distance);
 
 	//do the draw call that renders the mesh into the screen
 	mesh->render(GL_TRIANGLES);
@@ -265,21 +268,21 @@ void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Camera* camera, Node* 
 		BoundingBox world_bounding;
 		// If the node is parent it will not have any mesh but we want to add it
 		world_bounding = transformBoundingBox(curr_model, node->mesh->box);
-		//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize)) {
-		Vector3 nodepos = curr_model.getTranslation();
-		rc.mesh = node->mesh;
-		rc.material = node->material;
-		rc.model = curr_model;
-		rc.distance_to_camera = nodepos.distance(scene->main_camera.eye);
-		// If the material is opaque add a distance factor to sort it at the end of the vector
-		if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
-		{
-			int dist_factor = 1000000;
-			rc.distance_to_camera += dist_factor;
+		// Add only if inside the frustum of the camera
+		if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize)) {
+			Vector3 nodepos = curr_model.getTranslation();
+			rc.mesh = node->mesh;
+			rc.material = node->material;
+			rc.model = curr_model;
+			rc.distance_to_camera = nodepos.distance(scene->main_camera.eye);
+			// If the material is opaque add a distance factor to sort it at the end of the vector
+			if (rc.material->alpha_mode == GTR::eAlphaMode::BLEND)
+			{
+				int dist_factor = 1000000;
+				rc.distance_to_camera += dist_factor;
+			}
+			render_calls.push_back(rc);
 		}
-			
-		render_calls.push_back(rc);
-		//}
 	}
 
 
@@ -293,7 +296,6 @@ void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Camera* camera, Node* 
 	}
 }
 
-// AIXÒ S'HA DE FER AL RENDERER!
 void GTR::Renderer::createRenderCalls(GTR::Scene* scene, Camera* camera)
 {
 	render_calls.clear();
@@ -314,26 +316,9 @@ void GTR::Renderer::createRenderCalls(GTR::Scene* scene, Camera* camera)
 			// First take the root node
 			if (pent->prefab) {
 				GTR::Node* curr_node = &pent->prefab->root;
-				//compute the bounding box of the object in world space (by using the mesh bounding box transformed to world space)
-				//BoundingBox world_bounding = transformBoundingBox(rc.model, rc.mesh->box);
-
-					//if bounding box is inside the camera frustum then the object is probably visible
-					//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
-					//{
-						////compute global matrix
-						//Matrix44 node_model = node->getGlobalMatrix(true) * prefab_model;
 				Matrix44 node_model = curr_node->getGlobalMatrix(true) * ent->model;
-
-				//BoundingBox world_bounding;
-				//// If the node is parent it will not have any mesh but we want to add it
-				//if (curr_node->mesh)
-				//	world_bounding = transformBoundingBox(ent->model, curr_node->mesh->box);
-				//	
-				//if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
-				//{
-					// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
+				// Pass the global matrix for this node and the root one to compute the global matrix for the rest of children
 				addRenderCall_node(scene, camera, curr_node, node_model, ent->model);
-				//}
 			}
 		}
 	}

@@ -200,8 +200,8 @@ void GTR::LightEntity::renderInMenu() {
 	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
 	//if (ImGui::TreeNode(light, "Light Info"))
 	//{
-	//	//light->renderInMenu();
-	//	ImGui::TreePop();
+	light->renderInMenu();
+	ImGui::TreePop();
 	//}
 
 	// AQUÍ HA FET ALGO QUE DIU QUE ERA PER DEBUGAR AMB UN SWITCH --- NO M'HE ENTERAT BÉ
