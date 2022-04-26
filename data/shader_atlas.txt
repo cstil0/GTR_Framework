@@ -124,11 +124,21 @@ uniform float u_time;
 uniform float u_alpha_cutoff;
 
 // Light parameters
+uniform int u_type_of_render;
 uniform vec3 u_ambient_light;
+
+// -- Single Pass
+#define MAX_LIGHTS 10
+uniform vec3 u_lights_position[MAX_LIGHTS];
+uniform vec3 u_lights_color[MAX_LIGHTS];
+uniform float u_lights_intensity[MAX_LIGHTS];
+uniform float u_lights_max_distance[MAX_LIGHTS];
+
+// -- Multi Pass
 uniform vec3 u_light_position;
 uniform vec3 u_light_color;
-uniform float u_intensity;
-uniform float u_max_distance;
+uniform float u_light_intensity;
+uniform float u_light_max_distance;
 
 out vec4 FragColor;
 
@@ -143,10 +153,44 @@ void main()
 
 	vec3 light = vec3(u_ambient_light);
 
-	vec3 L = normalize(u_light_position - v_world_position);
-	vec3 N = normalize(v_normal);
-	float NdotL = clamp(dot(L,N), 0.0, 1.0);
-	light += u_light_color * NdotL;
+	// -- Single Pass --
+	if (u_type_of_render == 0){
+		// Iterate lights
+		for (int i = 0; i < MAX_LIGHTS; i++) {
+			// Distance from current point to light
+			vec3 L = u_lights_position[i] - v_world_position;
+			// Modulus
+			float light_dist = length(L);
+			// Normalize L
+			L/= light_dist;
+			vec3 N = normalize(v_normal);
+			float NdotL = clamp(dot(L,N), 0.0, 1.0);
+
+			// Attenuation
+			float att_factor = u_light_max_distance - light_dist;
+			att_factor /= u_light_max_distance;
+
+			att_factor = max(att_factor, 0.0);
+			light += u_lights_color[i] * NdotL * u_lights_intensity[i] * att_factor;
+		}
+	}
+
+	// -- Multi Pass --
+	else if (u_type_of_render == 1){
+		vec3 L = u_light_position - v_world_position;			
+		float light_dist = length(L);
+		L/= light_dist;
+		vec3 N = normalize(v_normal);
+		float NdotL = clamp(dot(L,N), 0.0, 1.0);
+
+		// Attenuation
+		float att_factor = u_light_max_distance - light_dist;
+		att_factor /= u_light_max_distance;
+		att_factor = max(att_factor, 0.0);
+
+		light += u_light_color * NdotL * u_light_intensity * att_factor;
+
+	}
 
 	color.xyz *= light;
 

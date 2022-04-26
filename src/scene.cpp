@@ -11,7 +11,8 @@ GTR::Scene* GTR::Scene::instance = NULL;
 GTR::Scene::Scene()
 {
 	instance = this;
-	
+	// Start with singlepass
+	typeOfRender = Scene::eRenderPipeline::MULTIPASS;
 }
 
 void GTR::Scene::clear()
@@ -200,11 +201,21 @@ void GTR::LightEntity::renderInMenu() {
 	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
 	//if (ImGui::TreeNode(light, "Light Info"))
 	//{
-	light->renderInMenu();
-	ImGui::TreePop();
-	//}
 
-	// AQUÍ HA FET ALGO QUE DIU QUE ERA PER DEBUGAR AMB UN SWITCH --- NO M'HE ENTERAT BÉ
+	std::string type_str;
+	switch (light_type) {
+	case eTypeOfLight::POINT: type_str = "POINT"; break;
+	case eTypeOfLight::SPOT: type_str = "SPOT"; break;
+	case eTypeOfLight::DIRECTIONAL: type_str = "DIRECTIONAL"; break;
+	}
+
+	ImGui::Text("LightType: %s", type_str.c_str());
+	ImGui::ColorEdit3("Color", color.v);
+	ImGui::SliderFloat("Intensity", &intensity, 0.0, 10);
+	ImGui::SliderFloat("Maximum Distance", &max_distance, 0.0, 1000);
+		//ImGui::TreePop();
+		//}
+
 #endif
 
 }

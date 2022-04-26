@@ -175,31 +175,6 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		return;
 	shader->enable();
 
-
-	// HI HA DUES MANERES DE COMPUTAR VARIES LLUMS:
-	// SINGLE PASS -- ENVIEM LA INFO DE TOTES LES LLUMS I AL SHADER FEM UN FOR PER RECORRER TOTES LES 
-	// LLUMS I ANAR SUMANT. EL QUE PASSA ÉS QUE S'HA DE DEFINIR UNA VARIABLE AMB EL MÀXIM DE LIGHTS
-	// MULTIPASS -- MÉS EFICIENT: PRINTEM L'OBJECTE TANTES VEGADES COM LLUMS TENIM. EL PROBLEMA ÉS QUE LLAVORS EL Z BUFFER DONA
-	// PROBLEMES DE MANERA QUE PRINTEM SI EL ZBUFFER TÉ UN OBJECTE A UNA DISTÀNCIA <= I FEM BLENDING NOMÉS A LA PRIMERA ITERACIÓ
-	// (EL FOR ARA ESTÀ AL RENDERER, NO AL SHADER)
-	
-	// Valor por defecto
-	glDepthFunc(GL_LESS);
-	// PINTAMOS SI EL VALOR QUE HAY EN EL DEPTH BUFFER ES MENOR O IGUAL AL QUE QUEREMOS PINTAR. ASÍ NO TENEMOS PROBLEMA CON PINTAR VARIAS VECES LA MESH
-	glDepthFunc(GL_LEQUAL);
-	//glBlendFunc(GL_LEQUAL, GL_ONE); // LO SEGUNDO ES PARA HACER UNA INTERPOLACIÓN, pero no he acabado de entender por qué este tipo
-
-	// LA LUZ AMBIENTE SOLO DEBERÍA SUMARSE UNA VEZ!! POR LO TANTO DESPUÉS DE LA PRIMERA ITERACIÓN LA PONEMOS A CERO
-	//for (int i = 0; i < lights.size(); ++i) {
-		//// DESACTIVAMOS EL BLEND PARA LA PRIMERA LUZ -- PORR???
-		//if (i == 0) {
-		//	glDisable(GL_BLEND);
-		//}
-		//else
-		//	glEnable(GL_BLEND);
-		//// PASSEM ELS UNIFORMS DE LA LIGHT[I]
-	//}
-
 	//upload uniforms
 	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
 	shader->setUniform("u_camera_position", camera->eye);
@@ -217,20 +192,88 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 	// Light parameters
 	Scene* scene = Scene::instance;
-	shader->setUniform("u_ambient_light", scene->ambient_light);
-	shader->setUniform("u_light_position", lights[0]->model.getTranslation());
-	shader->setUniform("u_light_color", lights[0]->color);
-	shader->setUniform("u_intensity", lights[0]->intensity);
-	shader->setUniform("u_max_distance", lights[0]->max_distance);
+	// -- Single Pass --
+	if (scene->typeOfRender == Scene::eRenderPipeline::SINGLEPASS) {
+		// Define some variables to store lights information
+		std::vector<Vector3> lights_position;
+		std::vector<Vector3> lights_color;
+		std::vector<float> lights_intensity;
+		std::vector<float> lights_max_distance;
 
-	//do the draw call that renders the mesh into the screen
-	mesh->render(GL_TRIANGLES);
+		// Iterate and store the information
+		for (int i = 0; i < lights.size(); i++) {
+			if (lights[i]->visible) {
+				lights_position.push_back(lights[i]->model.getTranslation());
+				lights_color.push_back(lights[i]->color);
+				lights_intensity.push_back(lights[i]->intensity);
+				lights_max_distance.push_back(lights[i]->max_distance);
+			}
+		}
+
+		// Pass to the shader
+		shader->setUniform("u_type_of_render", scene->typeOfRender);
+		shader->setUniform("u_ambient_light", scene->ambient_light);
+		shader->setUniform("u_lights_position", lights_position);
+		shader->setUniform("u_lights_color", lights_color);
+		shader->setUniform("u_lights_intensity", lights_intensity);
+		shader->setUniform("u_lights_max_distance", lights_max_distance);
+
+		//do the draw call that renders the mesh into the screen
+		mesh->render(GL_TRIANGLES);
+	}
+
+	// -- Multi Pass --
+	else if (scene->typeOfRender == Scene::eRenderPipeline::MULTIPASS) {
+		// Valor por defecto
+		//glDepthFunc(GL_LESS);
+		// PINTAMOS SI EL VALOR QUE HAY EN EL DEPTH BUFFER ES MENOR O IGUAL AL QUE QUEREMOS PINTAR. ASÍ NO TENEMOS PROBLEMA CON PINTAR VARIAS VECES LA MESH
+		// Draw if the pixel in the depth buffer has less or equal distance from the one drawn
+		glDepthFunc(GL_LEQUAL);
+
+		// Do a linear interpolation btw the pixel * 1 and what we want to draw * 1
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		// Disable blending for the first light
+		//glDisable(GL_BLEND);
+
+		// LA LUZ AMBIENTE SOLO DEBERÍA SUMARSE UNA VEZ!! POR LO TANTO DESPUÉS DE LA PRIMERA ITERACIÓN LA PONEMOS A CERO
+		Vector3 ambient_light = scene->ambient_light;
+		for (int i = 0; i < lights.size(); ++i) {
+			//// DESACTIVAMOS EL BLEND PARA LA PRIMERA LUZ -- PORR???
+			//if (i == 0) {
+			//	glDisable(GL_BLEND);
+			//}
+			//else
+			//	glEnable(GL_BLEND);
+			//// PASSEM ELS UNIFORMS DE LA LIGHT[I]
+			// 		
+			if (!lights[i]->visible)
+				continue;
+
+			// Pass to the shader
+			shader->setUniform("u_type_of_render", scene->typeOfRender);
+			shader->setUniform("u_ambient_light", ambient_light);
+			shader->setUniform("u_light_position", lights[i]->model.getTranslation());
+			shader->setUniform("u_light_color", lights[i]->color);
+			shader->setUniform("u_light_intensity", lights[i]->intensity);
+			shader->setUniform("u_light_max_distance", lights[i]->max_distance);
+			//do the draw call that renders the mesh into the screen
+			mesh->render(GL_TRIANGLES);
+
+			// Activate blending again for the rest of lights to do the interpolation
+			glEnable(GL_BLEND);
+
+			// Reset ambient light to add it only once
+			ambient_light = vec3(0.0, 0.0, 0.0);
+		}
+	}
+
 
 	//disable shader
 	shader->disable();
 
 	//set the render state as it was before to avoid problems with future renders
 	glDisable(GL_BLEND);
+	glDepthFunc(GL_LESS);
 }
 
 Texture* GTR::CubemapFromHDRE(const char* filename)

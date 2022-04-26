@@ -743,6 +743,28 @@ void Shader::setMatrix44Array( const char* varname, Matrix44* m_array, int num )
 	assert(glGetError() == GL_NO_ERROR);
 }
 
+// To pass std::vector to the shader
+void Shader::setVector3Array(const char* varname, Vector3* v_array, int num)
+{
+	GLint loc = getLocation(varname, &locations);
+	CHECK_SHADER_VAR(loc, varname);
+	glUniform3fv(loc, num, (GLfloat*)v_array);
+	assert(glGetError() == GL_NO_ERROR);
+}
+
+void Shader::setFloatArray(const char* varname, float* f_array, int num)
+{
+	//GLint loc = getLocation(varname, &locations);
+	//CHECK_SHADER_VAR(loc, varname);
+	//glUniform3fv(loc, num, (GLfloat*)f_array);
+	//assert(glGetError() == GL_NO_ERROR);
+
+	GLint loc = getLocation(varname, &locations);
+	CHECK_SHADER_VAR(loc, varname);
+	glUniform1fv(loc, num, (GLfloat*)f_array);
+	assert(glGetError() == GL_NO_ERROR);
+}
+
 void Shader::init()
 {
 	static bool firsttime = true;

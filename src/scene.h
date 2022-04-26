@@ -12,9 +12,6 @@ class cJSON;
 
 //our namespace
 namespace GTR {
-
-
-
 	enum eEntityType {
 		NONE = 0,
 		PREFAB = 1,
@@ -22,12 +19,6 @@ namespace GTR {
 		CAMERA = 3,
 		REFLECTION_PROBE = 4,
 		DECALL = 5
-	};
-
-	enum eLightType {
-		DIRECTIONAL,
-		POINT,
-		SPOTLIGHT
 	};
 
 	class Scene;
@@ -94,11 +85,18 @@ namespace GTR {
 	class Scene
 	{
 	public:
+		enum eRenderPipeline {
+			SINGLEPASS,
+			MULTIPASS
+		};
+
 		static Scene* instance;
 
 		Vector3 background_color;
 		Vector3 ambient_light;
 		Camera main_camera;
+
+		int typeOfRender;
 
 		Scene();
 
