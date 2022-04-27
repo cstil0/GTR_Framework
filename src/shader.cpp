@@ -754,14 +754,17 @@ void Shader::setVector3Array(const char* varname, Vector3* v_array, int num)
 
 void Shader::setFloatArray(const char* varname, float* f_array, int num)
 {
-	//GLint loc = getLocation(varname, &locations);
-	//CHECK_SHADER_VAR(loc, varname);
-	//glUniform3fv(loc, num, (GLfloat*)f_array);
-	//assert(glGetError() == GL_NO_ERROR);
-
 	GLint loc = getLocation(varname, &locations);
 	CHECK_SHADER_VAR(loc, varname);
 	glUniform1fv(loc, num, (GLfloat*)f_array);
+	assert(glGetError() == GL_NO_ERROR);
+}
+
+void Shader::setIntArray(const char* varname, int* i_array, int num)
+{
+	GLint loc = getLocation(varname, &locations);
+	CHECK_SHADER_VAR(loc, varname);
+	glUniform1iv(loc, num, (GLint*)i_array);
 	assert(glGetError() == GL_NO_ERROR);
 }
 

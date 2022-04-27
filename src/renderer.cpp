@@ -195,6 +195,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	// -- Single Pass --
 	if (scene->typeOfRender == Scene::eRenderPipeline::SINGLEPASS) {
 		// Define some variables to store lights information
+		std::vector<int> lights_type;
 		std::vector<Vector3> lights_position;
 		std::vector<Vector3> lights_color;
 		std::vector<float> lights_intensity;
@@ -203,15 +204,19 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		// Iterate and store the information
 		for (int i = 0; i < lights.size(); i++) {
 			if (lights[i]->visible) {
-				lights_position.push_back(lights[i]->model.getTranslation());
-				lights_color.push_back(lights[i]->color);
-				lights_intensity.push_back(lights[i]->intensity);
-				lights_max_distance.push_back(lights[i]->max_distance);
+				LightEntity* light = lights[i];
+				lights_type.push_back(light->light_type);
+				lights_position.push_back(light->model.getTranslation());
+				lights_color.push_back(light->color);
+				lights_intensity.push_back(light->intensity);
+				lights_max_distance.push_back(light->max_distance);
 			}
 		}
 
 		// Pass to the shader
+		shader->setUniform("u_light_type", lights_type);
 		shader->setUniform("u_type_of_render", scene->typeOfRender);
+
 		shader->setUniform("u_ambient_light", scene->ambient_light);
 		shader->setUniform("u_lights_position", lights_position);
 		shader->setUniform("u_lights_color", lights_color);
@@ -238,6 +243,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		// LA LUZ AMBIENTE SOLO DEBERÍA SUMARSE UNA VEZ!! POR LO TANTO DESPUÉS DE LA PRIMERA ITERACIÓN LA PONEMOS A CERO
 		Vector3 ambient_light = scene->ambient_light;
 		for (int i = 0; i < lights.size(); ++i) {
+			LightEntity* light = lights[i];
 			//// DESACTIVAMOS EL BLEND PARA LA PRIMERA LUZ -- PORR???
 			//if (i == 0) {
 			//	glDisable(GL_BLEND);
@@ -250,12 +256,21 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 				continue;
 
 			// Pass to the shader
+			shader->setUniform("u_light_type", light->light_type);
 			shader->setUniform("u_type_of_render", scene->typeOfRender);
+
 			shader->setUniform("u_ambient_light", ambient_light);
-			shader->setUniform("u_light_position", lights[i]->model.getTranslation());
-			shader->setUniform("u_light_color", lights[i]->color);
-			shader->setUniform("u_light_intensity", lights[i]->intensity);
-			shader->setUniform("u_light_max_distance", lights[i]->max_distance);
+			shader->setUniform("u_light_position", light->model.getTranslation());
+			shader->setUniform("u_light_color", light->color);
+			shader->setUniform("u_light_intensity", light->intensity);
+			shader->setUniform("u_light_max_distance", light->max_distance);
+
+			// Use the cosine to compare it directly to NdotL
+			shader->setUniform("u_light_cone_cos", (float)cos(light->cone_angle*DEG2RAD));
+			shader->setUniform("u_light_cone_exp", light->cone_exp);
+			// NO ENTIENDO ESTA LINEA...:/ ESTAMOS ROTANDO TODO EL RATO HACIA EL EJE Z NO?? POR QUE ENTONCES SE PUEDE ROTAR MANUALMENTE DESDE IMGUI??
+			shader->setUniform("u_light_direction", light->model.rotateVector(Vector3(0.0, 0.0, 1.0)));
+
 			//do the draw call that renders the mesh into the screen
 			mesh->render(GL_TRIANGLES);
 
@@ -338,6 +353,47 @@ void GTR::Renderer::addRenderCall_node(GTR::Scene* scene, Camera* camera, Node* 
 		addRenderCall_node(scene, camera, curr_node, node_model, root_model);
 	}
 }
+
+//void GTR::Renderer::generateShadowmap(LightEntity* light)
+//{
+//	// LO MÁS BARATO SERIA GUARDAR UN SHADOW MAP PARA CADA LUZ PERO NO ES VIABLE SI TENEMOS MUCHAS LUCES
+//	// LO MEJOR SERÍA USAR UNA MUY GRANDE (ATLAS) Y QUE CADA UNA ESCRIBA EN UN TROCITO
+//	// SIEMPRE VIENE BIEN UN CONTROL DE ERRORES
+//	if (!light->cast_shadows) {
+//		return;
+//		// HA EXPLICADO UN CODIGO PARA AHORRAR UN POCO EN MEMORIA SI NO CASTEA SOMBRAS
+//	}
+//
+//	if (light->fbo) {
+//		light->fbo = new FBO();
+//		light->fbo->setDepthOnly(1024,1024);
+//		light->shadowmap = light->fbo->depth_texture;
+//	}
+//	
+//	// Empezamos a printar en la textura, no en la pantalla
+//	light->fbo->bind();
+//
+//	// Borramos el depthbuffer de la textura para no tener un ghosting de lo que ya había pintado
+//	glClear(GL_DEPTH_BUFFER_BIT);
+//	Camera light_camera;
+//	// LA IDEA ES QUE AHORA LA CAMARA ESTÉ DONDE ´ESTÁ LA LUZ
+//	// REVISAR AQUESTS PARÀMETRES..
+//	light_camera.setPerspective(light->cone_angle, 1.0, 0.1, light->max_distance);
+//	light_camera.lookAt(light->model.getTranslation(), light->model*Vector3(0,0,))
+//	light_camera.enable();
+//
+//	for (int i = 0; i < render_calls_size(); i++) {
+//		RenderCall& rc = render_calls[i];
+//		if (rc.material->alpha_mode == eAlphaMode::BLEND) {
+//			renderFlatMesh();
+//		}
+//	}
+//
+//	light->fbo->unbind();
+//	// ES UNA BUENA PRAXIS VOLVER A PONER TODO COMO ESTABA PARA NO TENER PROBLEMAS.
+//	light_camera->enable();
+//	// M'HE ADORMIT FORTAMENT:)
+//}
 
 void GTR::Renderer::createRenderCalls(GTR::Scene* scene, Camera* camera)
 {

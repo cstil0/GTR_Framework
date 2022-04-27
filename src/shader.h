@@ -63,7 +63,8 @@ public:
 	
 	// To pass std::vector to the shader
 	void setUniform(const char* varname, std::vector<Vector3>& vector) { assert(current == this && vector.size()); setVector3Array(varname, &vector[0], vector.size()); }
-	void setUniform(const char* varname, std::vector<float>& f_vector) { assert(current == this && vector.size()); setFloatArray(varname, &f_vector[0], f_vector.size()); }
+	void setUniform(const char* varname, std::vector<float>& f_vector) { assert(current == this && f_vector.size()); setFloatArray(varname, &f_vector[0], f_vector.size()); }
+	void setUniform(const char* varname, std::vector<int>& i_vector) { assert(current == this && i_vector.size()); setIntArray(varname, &i_vector[0], i_vector.size()); }
 
 	//for textures you must specify an slot (a number from 0 to 16) where this texture is stored in the shader
 	void setUniform(const char* varname, Texture* texture, int slot) { assert(current == this); setTexture(varname, texture, slot); }
@@ -77,6 +78,7 @@ public:
 	virtual void setMatrix44Array(const char* varname, Matrix44* m_array, int num);
 	virtual void setVector3Array(const char* varname, Vector3* v_array, int num);
 	virtual void setFloatArray(const char* varname, float* f_array, int num);
+	virtual void setIntArray(const char* varname, int* i_array, int num);
 
 	virtual void setUniform1Array(const char* varname, const float* input, const int count) ;
 	virtual void setUniform2Array(const char* varname, const float* input, const int count) ;

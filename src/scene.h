@@ -8,6 +8,9 @@
 
 //forward declaration
 class cJSON; 
+// EXISTE ESTA CLASE PERO NO TE DIGO COMO ES POR AHORA
+// HA EXPLICADO EL POR QUÉ NO HACE FALTA INCLUIR TODA LA CLASE PERO NO ME HE ENTERADO
+class FBO;
 
 
 //our namespace
@@ -75,6 +78,10 @@ namespace GTR {
 		float cone_angle;
 		float cone_exp;
 		float area_size;
+
+		// SON PUNTEROS POR QUE SI UNA LUZ NO CREA SOMBRAS ASI NO PERDEMOS ESPACIO EN MEMORIA
+		//FBO* fbo;
+		//bool cast_shadows;
 
 		LightEntity();
 		virtual void renderInMenu();

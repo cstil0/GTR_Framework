@@ -57,6 +57,7 @@ namespace GTR {
 
 		static bool compare_distances(const RenderCall rc1, const RenderCall rc2) { return (rc1.distance_to_camera < rc2.distance_to_camera); }
 	
+		//void generateShadowmap(LightEntity* light);
 	};
 
 	Texture* CubemapFromHDRE(const char* filename);
