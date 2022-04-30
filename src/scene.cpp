@@ -213,6 +213,11 @@ void GTR::LightEntity::renderInMenu() {
 	ImGui::ColorEdit3("Color", color.v);
 	ImGui::SliderFloat("Intensity", &intensity, 0.0, 10);
 	ImGui::SliderFloat("Maximum Distance", &max_distance, 0.0, 1000);
+
+	if (light_type == LightEntity::eTypeOfLight::SPOT) {
+		ImGui::SliderFloat("Cone Angle", &cone_angle, 0.0, 80);
+		ImGui::SliderFloat("Cone Exponential", &cone_exp, 0.0, 100);
+	}
 		//ImGui::TreePop();
 		//}
 
@@ -237,4 +242,6 @@ void GTR::LightEntity::configure(cJSON* json)
 
 	area_size = readJSONNumber(json, "area_size", area_size);
 	max_distance = readJSONNumber(json, "max_dist", max_distance);
+	cone_angle = readJSONNumber(json, "cone_angle", cone_angle);
+	cone_exp = readJSONNumber(json, "cone_exp", cone_angle);
 }

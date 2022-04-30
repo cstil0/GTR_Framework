@@ -1,10 +1,11 @@
 //example of some shaders compiled
 flat basic.vs flat.fs
 texture basic.vs texture.fs
-light basic.vs light.fs
+multi_pass basic.vs light_multi_pass.fs
+single_pass basic.vs light_single_pass.fs
 depth quad.vs depth.fs
 multi basic.vs multi.fs
-
+//------------------------------------------------------------------
 \basic.vs
 
 #version 330 core
@@ -46,7 +47,7 @@ void main()
 	//calcule the position of the vertex using the matrices
 	gl_Position = u_viewprojection * vec4( v_world_position, 1.0 );
 }
-
+//------------------------------------------------------------------
 \quad.vs
 
 #version 330 core
@@ -61,7 +62,7 @@ void main()
 	gl_Position = vec4( a_vertex, 1.0 );
 }
 
-
+//-------------------------------------------------------------
 \flat.fs
 
 #version 330 core
@@ -75,7 +76,7 @@ void main()
 	FragColor = u_color;
 }
 
-
+//------------------------------------------------------------
 \texture.fs
 
 #version 330 core
@@ -91,8 +92,6 @@ uniform sampler2D u_texture;
 uniform float u_time;
 uniform float u_alpha_cutoff;
 
-
-
 out vec4 FragColor;
 
 void main()
@@ -107,9 +106,8 @@ void main()
 	FragColor = color;
 }
 
-// AQUEST SHADER S'HA DE PROGRAMAR PER LES LLUMS
-\light.fs
-
+//------------------------------------------------------------------------------------------------------------------------------
+\light_single_pass.fs
 #version 330 core
 
 in vec3 v_position;
@@ -124,7 +122,6 @@ uniform float u_time;
 uniform float u_alpha_cutoff;
 
 // Light parameters
-uniform int u_type_of_render;
 uniform vec3 u_ambient_light;
 
 // -- Single Pass
@@ -132,85 +129,61 @@ uniform vec3 u_ambient_light;
 uniform int u_lights_type[MAX_LIGHTS];
 uniform vec3 u_lights_position[MAX_LIGHTS];
 uniform vec3 u_lights_color[MAX_LIGHTS];
-uniform float u_lights_intensity[MAX_LIGHTS];
 uniform float u_lights_max_distance[MAX_LIGHTS];
 uniform vec3 u_lights_direction[MAX_LIGHTS];
 uniform float u_lights_cone_cos[MAX_LIGHTS];
 uniform float u_lights_cone_exp[MAX_LIGHTS];
 
-// -- Multi Pass
-uniform int u_light_type;
-uniform vec3 u_light_position;
-uniform vec3 u_light_color;
-uniform float u_light_intensity;
-uniform float u_light_max_distance;
-uniform vec3 u_light_direction;
-uniform float u_light_cone_cos;
-uniform float u_light_cone_exp;
-
 out vec4 FragColor;
+// Save computations related to light
+struct LightStruct{
+	vec3 L;
+	vec3 D;
 
-vec3 computeSpotLight(vec3 color, float intensity, float max_dist, vec3 pos, vec3 light_dir, float cone_cos, float cone_exp){
+	float NdotL;
+	float LdotD;
+	float light_dist;
+
+	float spot_factor;
+	float att_factor;
+}LightComp;
+
+void computeL_point(inout LightStruct lc, int i){
 	// Distance from current point to light
-	vec3 L = pos - v_world_position;
-	// Modulus
-	float light_dist = length(L);
+	vec3 L = u_lights_position[i] - v_world_position;
+	// Modulus			
+	lc.light_dist = length(L);
 	// Normalize L
-	L/= light_dist;
-	// Spot direction
-	vec3 D = -normalize(light_dir);
-	float DdotL = dot(D,L);
+	lc.L = L/lc.light_dist;
+}
 
-	// Compute light if point is inside the cut-off angle
-	if (DdotL >= cone_cos){
-		vec3 N = normalize(v_normal);
-		float NdotL = clamp(dot(L,N), 0.0, 1.0);
+void computeL_directional(inout LightStruct lc, int i){
+	vec3 L = normalize(u_lights_position[i]);
+	lc.light_dist = length(L);
+	lc.L = L/lc.light_dist;
+}
 
-		// Attenuation
-		float att_factor = max_dist - light_dist;
-		att_factor /= max_dist;
-		att_factor = max(att_factor, 0.0);
+void computeNdotL(inout LightStruct lc){
+	vec3 N = normalize(v_normal);
+	lc.NdotL = clamp(dot(lc.L,N), 0.0, 1.0);
+}
 
-		float spot_factor = pow(DdotL, cone_exp);
-		return color * NdotL * intensity * pow(att_factor,2) * spot_factor;
+void computeSpotFactor(inout LightStruct lc, int i){
+	lc.D = normalize(u_lights_direction[i]);
+	lc.LdotD = dot(-lc.L, lc.D);
+	if (lc.LdotD >= u_lights_cone_cos[i]){
+		// How much point is inside spotlight
+		lc.spot_factor = pow(lc.LdotD, u_lights_cone_exp[i]);	
 	}
 	else{
-		return vec3(0.0f, 0.0f, 0.0f);
-	}
+		lc.spot_factor = 0.0;
+	}	
 }
 
-vec3 computeDirectionalLight(vec3 color, float intensity, float max_dist, vec3 pos){
-	// Distance from current point to light
-	vec3 L = pos - v_world_position;
-	// Modulus
-	float light_dist = length(L);
-	// Normalize L
-	L/= light_dist;
-	vec3 N = normalize(v_normal);
-	float NdotL = clamp(dot(L,N), 0.0, 1.0);
-
-	// Attenuation
-	float att_factor = max_dist - light_dist;
-	att_factor /= max_dist;
-	att_factor = max(att_factor, 0.0);
-	return color * NdotL * intensity * pow(att_factor,2);
-}
-
-vec3 computePointLight(vec3 color, float intensity, float max_dist, vec3 pos){
-	// Distance from current point to light
-	vec3 L = pos - v_world_position;
-	// Modulus			
-	float light_dist = length(L);
-	// Normalize L
-	L/= light_dist;
-	vec3 N = normalize(v_normal);
-	float NdotL = clamp(dot(L,N), 0.0, 1.0);
-
-	// Attenuation
-	float att_factor = max_dist - light_dist;
-	att_factor /= max_dist;
-	att_factor = max(att_factor, 0.0);
-	return color * NdotL * intensity * pow(att_factor,2);
+void computeAttenuation(inout LightStruct lc, int i){
+	float att_factor = u_lights_max_distance[i] - lc.light_dist;
+	att_factor /= u_lights_max_distance[i];
+	lc.att_factor = max(att_factor, 0.0);
 }
 
 void main()
@@ -224,41 +197,170 @@ void main()
 
 	vec3 light = vec3(u_ambient_light);
 
-	// -- Single Pass --
-	if (u_type_of_render == 0){
-		// Iterate lights
-		for (int i = 0; i < MAX_LIGHTS; i++) {
-			if (u_lights_type[i] == 1){
-				light += computePointLight(u_lights_color[i], u_lights_intensity[i], u_lights_max_distance[i], u_lights_position[i]);
-			}
-			else if (u_lights_type[i] == 2){
-				light += computeSpotLight(u_lights_color[i], u_lights_intensity[i], u_lights_max_distance[i], u_lights_position[i], u_lights_direction[i], u_lights_cone_cos[i], u_lights_cone_exp[i]);
-			}
-			else if (u_lights_type[i] == 3){
-				light += computeDirectionalLight(u_lights_color[i], u_lights_intensity[i], u_lights_max_distance[i], u_lights_position[i]);
-			}
+	// Iterate lights
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		LightComp = LightStruct(
+			vec3(0.0, 0.0, 0.0), //L
+			vec3(0.0, 0.0, 0.0), //DdotL
+
+			0.0, // NdotL
+			0.0, // LdotD
+			0.0, // light dist
+
+			1.0, // spot factor
+			0.0 // attenuation factor
+		);
+
+		// Point
+		if (u_lights_type[i] == 1){
+			computeL_point(LightComp, i);
 		}
+
+		// Spot
+		else if (u_lights_type[i] == 2){
+			computeL_point(LightComp, i);
+			computeSpotFactor(LightComp, i);
+		}
+
+		// Directional
+		else if (u_lights_type[i] == 3){
+			computeL_directional(LightComp, i);
+		}
+
+		computeNdotL(LightComp);
+		computeAttenuation(LightComp, i);
+		light += u_lights_color[i] * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor;
 	}
-
-	// -- Multi Pass --
-	else if (u_type_of_render == 1){
-		if (u_light_type == 1){
-			light += computePointLight(u_light_color, u_light_intensity, u_light_max_distance, u_light_position);
-		}
-		else if (u_light_type == 2){
-			light += computeSpotLight(u_light_color, u_light_intensity, u_light_max_distance, u_light_position, u_light_direction, u_light_cone_cos, u_light_cone_exp);
-		}
-		else if (u_light_type == 3){
-			light += computeDirectionalLight(u_light_color, u_light_intensity, u_light_max_distance, u_light_position);
-		}
-
-	}
-
 	color.xyz *= light;
-
 	FragColor = color;
 }
 
+//----------------------------------------------------------------------------------------------------------------------------
+\light_multi_pass.fs
+#version 330 core
+
+in vec3 v_position;
+in vec3 v_world_position;
+in vec3 v_normal;
+in vec2 v_uv;
+in vec4 v_color;
+
+uniform vec4 u_color;
+uniform sampler2D u_texture;
+uniform float u_time;
+uniform float u_alpha_cutoff;
+
+// Light parameters
+uniform vec3 u_ambient_light;
+
+uniform int u_light_type;
+uniform vec3 u_light_position;
+uniform vec3 u_light_color;
+uniform float u_light_max_distance;
+uniform vec3 u_light_direction;
+uniform float u_light_cone_cos;
+uniform float u_light_cone_exp;
+
+out vec4 FragColor;
+
+// Save computations related to light
+struct LightStruct{
+	vec3 L;
+	vec3 D;
+
+	float NdotL;
+	float LdotD;
+	float light_dist;
+
+	float spot_factor;
+	float att_factor;
+}LightComp;
+
+void computeL_point(inout LightStruct lc){
+	// Distance from current point to light
+	vec3 L = u_light_position - v_world_position;
+	// Modulus			
+	lc.light_dist = length(L);
+	// Normalize L
+	lc.L = L/lc.light_dist;
+}
+
+void computeL_directional(inout LightStruct lc){
+	vec3 L = normalize(u_light_position);
+	lc.light_dist = length(L);
+	lc.L = L/lc.light_dist;
+}
+
+void computeNdotL(inout LightStruct lc){
+	vec3 N = normalize(v_normal);
+	lc.NdotL = clamp(dot(lc.L,N), 0.0, 1.0);
+}
+
+void computeSpotFactor(inout LightStruct lc){
+	lc.D = normalize(u_light_direction);
+	lc.LdotD = dot(-lc.L, lc.D);
+	if (lc.LdotD >= u_light_cone_cos){
+		// How much point is inside spotlight
+		lc.spot_factor = pow(lc.LdotD, u_light_cone_exp);	
+	}
+	else{
+		lc.spot_factor = 0.0;
+	}	
+}
+
+void computeAttenuation(inout LightStruct lc){
+	float att_factor = u_light_max_distance - lc.light_dist;
+	att_factor /= u_light_max_distance;
+	lc.att_factor = max(att_factor, 0.0);
+}
+
+void main()
+{
+	LightComp = LightStruct(
+		vec3(0.0, 0.0, 0.0), //L
+		vec3(0.0, 0.0, 0.0), //DdotL
+
+		0.0, // NdotL
+		0.0, // LdotD
+		0.0, // light dist
+
+		1.0, // spot factor
+		0.0 // attenuation factor
+	);
+
+	vec2 uv = v_uv;
+	vec4 color = u_color;
+	color *= texture( u_texture, v_uv );
+
+	if(color.a < u_alpha_cutoff)
+		discard;
+
+	vec3 light = vec3(u_ambient_light);
+
+	// Point
+	if (u_light_type == 1){
+		computeL_point(LightComp);
+	}
+
+	// Spot
+	else if (u_light_type == 2){
+		computeL_point(LightComp);
+		computeSpotFactor(LightComp);
+	}
+
+	// Directional
+	else if (u_light_type == 3){
+		computeL_directional(LightComp);
+	}
+
+	computeNdotL(LightComp);
+	computeAttenuation(LightComp);
+	light += u_light_color * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor;
+	color.xyz *= light;
+	FragColor = color;
+}
+ 
+//------------------------------------------------------------
 \multi.fs
 
 #version 330 core

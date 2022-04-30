@@ -166,7 +166,12 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
     assert(glGetError() == GL_NO_ERROR);
 
 	//chose a shader
-	shader = Shader::Get("light");
+	Scene* scene = Scene::instance;
+	// ES UNA BUENA IDEA HACER ESTE IF DOS VECES...?
+	if (scene->typeOfRender == Scene::eRenderPipeline::SINGLEPASS)
+		shader = Shader::Get("single_pass");
+	else if (scene->typeOfRender == Scene::eRenderPipeline::MULTIPASS)
+		shader = Shader::Get("multi_pass");
 
     assert(glGetError() == GL_NO_ERROR);
 
@@ -191,15 +196,16 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 
 	// Light parameters
-	Scene* scene = Scene::instance;
 	// -- Single Pass --
 	if (scene->typeOfRender == Scene::eRenderPipeline::SINGLEPASS) {
 		// Define some variables to store lights information
 		std::vector<int> lights_type;
 		std::vector<Vector3> lights_position;
 		std::vector<Vector3> lights_color;
-		std::vector<float> lights_intensity;
 		std::vector<float> lights_max_distance;
+		std::vector<float> lights_cone_cos;
+		std::vector<float> lights_cone_exp;
+		std::vector<Vector3> lights_direction;
 
 		// Iterate and store the information
 		for (int i = 0; i < lights.size(); i++) {
@@ -207,24 +213,33 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 				LightEntity* light = lights[i];
 				lights_type.push_back(light->light_type);
 				lights_position.push_back(light->model.getTranslation());
-				lights_color.push_back(light->color);
-				lights_intensity.push_back(light->intensity);
+				lights_color.push_back(light->color*light->intensity);
 				lights_max_distance.push_back(light->max_distance);
+				lights_cone_cos.push_back((float)cos(light->cone_angle * DEG2RAD));
+				lights_cone_exp.push_back(light->cone_exp);
+				lights_direction.push_back(light->model.rotateVector(Vector3(0.0, 0.0, 1.0)));
 			}
 		}
 
 		// Pass to the shader
-		shader->setUniform("u_light_type", lights_type);
-		shader->setUniform("u_type_of_render", scene->typeOfRender);
-
+		shader->setUniform("u_lights_type", lights_type);
 		shader->setUniform("u_ambient_light", scene->ambient_light);
 		shader->setUniform("u_lights_position", lights_position);
 		shader->setUniform("u_lights_color", lights_color);
-		shader->setUniform("u_lights_intensity", lights_intensity);
 		shader->setUniform("u_lights_max_distance", lights_max_distance);
+
+		// Use the cosine to compare it directly to NdotL
+		shader->setUniform("u_lights_cone_cos", lights_cone_cos);
+		shader->setUniform("u_lights_cone_exp", lights_cone_exp);
+		shader->setUniform("u_lights_direction", lights_direction);
 
 		//do the draw call that renders the mesh into the screen
 		mesh->render(GL_TRIANGLES);
+
+		lights_type.clear();
+		lights_position.clear();
+		lights_color.clear();
+		lights_max_distance.clear();
 	}
 
 	// -- Multi Pass --
@@ -244,31 +259,20 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		Vector3 ambient_light = scene->ambient_light;
 		for (int i = 0; i < lights.size(); ++i) {
 			LightEntity* light = lights[i];
-			//// DESACTIVAMOS EL BLEND PARA LA PRIMERA LUZ -- PORR???
-			//if (i == 0) {
-			//	glDisable(GL_BLEND);
-			//}
-			//else
-			//	glEnable(GL_BLEND);
-			//// PASSEM ELS UNIFORMS DE LA LIGHT[I]
-			// 		
+
 			if (!lights[i]->visible)
 				continue;
 
 			// Pass to the shader
 			shader->setUniform("u_light_type", light->light_type);
-			shader->setUniform("u_type_of_render", scene->typeOfRender);
-
 			shader->setUniform("u_ambient_light", ambient_light);
 			shader->setUniform("u_light_position", light->model.getTranslation());
-			shader->setUniform("u_light_color", light->color);
-			shader->setUniform("u_light_intensity", light->intensity);
+			shader->setUniform("u_light_color", light->color*light->intensity);
 			shader->setUniform("u_light_max_distance", light->max_distance);
 
 			// Use the cosine to compare it directly to NdotL
 			shader->setUniform("u_light_cone_cos", (float)cos(light->cone_angle*DEG2RAD));
 			shader->setUniform("u_light_cone_exp", light->cone_exp);
-			// NO ENTIENDO ESTA LINEA...:/ ESTAMOS ROTANDO TODO EL RATO HACIA EL EJE Z NO?? POR QUE ENTONCES SE PUEDE ROTAR MANUALMENTE DESDE IMGUI??
 			shader->setUniform("u_light_direction", light->model.rotateVector(Vector3(0.0, 0.0, 1.0)));
 
 			//do the draw call that renders the mesh into the screen
