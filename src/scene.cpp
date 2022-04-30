@@ -184,14 +184,15 @@ void GTR::PrefabEntity::renderInMenu()
 GTR::LightEntity::LightEntity()
 {
 	entity_type = LIGHT;
+	light_type = LightEntity::eTypeOfLight::NONE;
 	//light = NULL;
-	color.set(1, 1, 1);
-	intensity = 1;
-	max_distance = 100;
+	color.set(0, 0, 0);
+	intensity = 0;
+	max_distance = 0;
 	// A DETERMINAR
-	cone_angle;
-	cone_exp;
-	area_size;
+	cone_angle = 0;
+	cone_exp = 0;
+	area_size = 0;
 }
 
 void GTR::LightEntity::renderInMenu() {

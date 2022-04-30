@@ -208,17 +208,20 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		std::vector<Vector3> lights_direction;
 
 		// Iterate and store the information
-		for (int i = 0; i < lights.size(); i++) {
-			if (lights[i]->visible) {
-				LightEntity* light = lights[i];
-				lights_type.push_back(light->light_type);
-				lights_position.push_back(light->model.getTranslation());
-				lights_color.push_back(light->color*light->intensity);
-				lights_max_distance.push_back(light->max_distance);
-				lights_cone_cos.push_back((float)cos(light->cone_angle * DEG2RAD));
-				lights_cone_exp.push_back(light->cone_exp);
-				lights_direction.push_back(light->model.rotateVector(Vector3(0.0, 0.0, 1.0)));
-			}
+		for (int i = 0; i < 10; i++) {
+			LightEntity* light;
+			if (i < lights.size() && lights[i]->visible)
+				light = lights[i];
+			else
+				light = new LightEntity();
+
+			lights_type.push_back(light->light_type);
+			lights_position.push_back(light->model.getTranslation());
+			lights_color.push_back(light->color * light->intensity);
+			lights_max_distance.push_back(light->max_distance);
+			lights_cone_cos.push_back((float)cos(light->cone_angle * DEG2RAD));
+			lights_cone_exp.push_back(light->cone_exp);
+			lights_direction.push_back(light->model.rotateVector(Vector3(0.0, 0.0, 1.0)));
 		}
 
 		// Pass to the shader
@@ -255,13 +258,18 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		// Disable blending for the first light
 		//glDisable(GL_BLEND);
 
-		// LA LUZ AMBIENTE SOLO DEBERÍA SUMARSE UNA VEZ!! POR LO TANTO DESPUÉS DE LA PRIMERA ITERACIÓN LA PONEMOS A CERO
 		Vector3 ambient_light = scene->ambient_light;
+		// To know if there is any light visible
+		bool any_visible= false;
+
 		for (int i = 0; i < lights.size(); ++i) {
 			LightEntity* light = lights[i];
 
 			if (!lights[i]->visible)
 				continue;
+
+			// There is at least one visible light
+			any_visible = true;
 
 			// Pass to the shader
 			shader->setUniform("u_light_type", light->light_type);
@@ -283,6 +291,11 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 			// Reset ambient light to add it only once
 			ambient_light = vec3(0.0, 0.0, 0.0);
+		}
+
+		// If no light is visible, pass only the ambient light to the shader
+		if (any_visible == false) {
+			shader->setUniform("u_ambient_light", ambient_light);
 		}
 	}
 
