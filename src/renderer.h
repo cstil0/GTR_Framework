@@ -29,6 +29,12 @@ namespace GTR {
 	// Separating the render from anything else makes the code cleaner
 	class Renderer
 	{
+		enum eTextureType {
+			COMPLETE,
+			NORMAL,
+			OCCLUSION,
+			EMISSIVE
+		};
 
 	public:
 		// Save only the visible nodes sorted by distance to the camera
@@ -41,6 +47,8 @@ namespace GTR {
 
 		bool show_shadowmap;
 		int shadowmap2show;
+
+		int texture2show;
 
 		Renderer();
 

@@ -24,6 +24,7 @@ GTR::Renderer::Renderer()
 {
 	show_shadowmap = false;
 	shadowmap2show = 3;
+	texture2show = 0;
 	fbo = NULL;
 	shadowmap = NULL;
 }
@@ -176,12 +177,17 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//define locals to simplify coding
 	Shader* shader = NULL;
 	Texture* texture = NULL;
+	Texture* normal_texture = NULL;
+	Texture* emissive_texture = NULL;
+	Texture* occlusion_texture = NULL;
+	Texture* met_rough_texture = NULL;
 
 	texture = material->color_texture.texture;
-	//texture = material->emissive_texture;
-	//texture = material->metallic_roughness_texture;
-	//texture = material->normal_texture;
-	//texture = material->occlusion_texture;
+	normal_texture = material->normal_texture.texture;
+	emissive_texture = material->emissive_texture.texture;
+	met_rough_texture = material->metallic_roughness_texture.texture;
+	occlusion_texture = material->occlusion_texture.texture;
+
 	if (texture == NULL)
 		texture = Texture::getWhiteTexture(); //a 1x1 white texture
 
@@ -224,8 +230,31 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	shader->setUniform("u_time", t );
 
 	shader->setUniform("u_color", material->color);
+	// Textures
 	if(texture)
 		shader->setUniform("u_texture", texture, 0);
+	if (emissive_texture)
+		shader->setUniform("u_emissive_texture", emissive_texture, 1);
+	else
+		shader->setUniform("u_emissive_texture", Texture::getBlackTexture(), 1);
+	if (occlusion_texture)
+		shader->setUniform("u_occlusion_texture", occlusion_texture, 2);
+	else
+		shader->setUniform("u_occlusion_texture", Texture::getWhiteTexture(), 2);
+	if (met_rough_texture)
+		shader->setUniform("u_met_rough_texture", met_rough_texture, 3);
+	else
+		shader->setUniform("u_met_rough_texture", Texture::getWhiteTexture(), 3);
+
+	if (normal_texture)
+		//shader->setUniform("u_normal_texture", normal_texture, 4);
+		shader->setUniform("u_normal_texture", normal_texture, 4);
+	else
+		shader->setUniform("u_normal_texture", Texture::getWhiteTexture(), 4);
+	//else
+	//	shader->setUniform("u_met_rough_texture", Texture::getWhiteTexture(), 3);
+
+	shader->setUniform("u_texture2show", texture2show);
 
 	//this is used to say which is the alpha threshold to what we should not paint a pixel on the screen (to cut polygons according to texture alpha)
 	shader->setUniform("u_alpha_cutoff", material->alpha_mode == GTR::eAlphaMode::MASK ? material->alpha_cutoff : 0);
@@ -248,6 +277,9 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		std::vector<float> lights_shadow_bias;
 
 		// Iterate and store the information
+		// ENLLOC DE CREAR UNA LIGHT BUIDA S'HAURIA DE PROBAR A FER UN IF AL SHADER PER SI LA PROPIETAT EXISTEIX
+		// I FER PUSHBACKS NÓMÉS SI LA LIGHT TE AQUELLA PROPIETAT
+		// PERO POTSER EN REALITAT ES MENYS EFICIENT
 		for (int i = 0; i < 10; i++) {
 			LightEntity* light;
 			if (i < lights.size() && lights[i]->visible)
@@ -445,7 +477,7 @@ void GTR::Renderer::generateShadowmap(LightEntity* light)
 		// Create a 1024x1024 depth texture
 		// TEXTURA QUE TIENE UN COMPONENTE DE COLOR CON LA DISTANCIA DE CADA PIXEL
 		// MEJOR PARA LA GPU SI ES POTENCIA DE 2
-		light->fbo->setDepthOnly(1024, 1024);
+		light->fbo->setDepthOnly(2048, 2048);
 		// SACAMOS LA TEXTURA DEL FBO Y LO GUARDAMOS EN UNA TEXTURA A PARTE
 		light->shadowmap = light->fbo->depth_texture;
 	}

@@ -772,7 +772,7 @@ void Shader::setTextureArray(const char* varname, Texture* t_vector, int num, in
 {
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(t_vector->texture_type, t_vector->texture_id);
-	setUniform1(varname, slot);
+	setUniform1Array(varname, &num, slot);
 	glActiveTexture(GL_TEXTURE0 + slot);
 }
 

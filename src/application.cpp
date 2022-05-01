@@ -255,9 +255,15 @@ void Application::renderDebugGUI(void)
 	ImGui::ColorEdit3("Ambient Light", scene->ambient_light.v);
 	ImGui::Combo("Render Pipeline", &scene->typeOfRender, "SINGLEPASS\0MULTIPASS");// , GTR::Scene::eRenderPipeline::MULTIPASS));
 	
+	// AIXÒ S'HAURIA DE POSAR EN UN RENDER MENU DE RENDERER!
 	if (ImGui::TreeNode(renderer, "Shadowmap")) {
 		ImGui::Checkbox("Show Shadowmap", &renderer->show_shadowmap);
 		ImGui::Combo("Light Shadow to show", &renderer->shadowmap2show, "SPOT\0POINT\0POINT\0DIRECTIONAL");
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode(scene, "Textures")) {
+		ImGui::Combo("Texture to show", &renderer->texture2show, "COMPLETE\0NORMAL\0OCCLUSION\0EMISSIVE");
 		ImGui::TreePop();
 	}
 
