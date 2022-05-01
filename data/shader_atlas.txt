@@ -134,6 +134,11 @@ uniform vec3 u_lights_direction[MAX_LIGHTS];
 uniform float u_lights_cone_cos[MAX_LIGHTS];
 uniform float u_lights_cone_exp[MAX_LIGHTS];
 
+uniform int u_lights_cast_shadows[MAX_LIGHTS];
+uniform sampler2D u_lights_shadowmap[MAX_LIGHTS];
+uniform mat4 u_lights_shadowmap_vpm[MAX_LIGHTS];
+uniform float u_lights_shadow_bias[MAX_LIGHTS];
+
 out vec4 FragColor;
 // Save computations related to light
 struct LightStruct{
@@ -146,6 +151,7 @@ struct LightStruct{
 
 	float spot_factor;
 	float att_factor;
+	float shadow_factor;
 }LightComp;
 
 void computeL_point(inout LightStruct lc, int i){
@@ -186,11 +192,50 @@ void computeAttenuation(inout LightStruct lc, int i){
 	lc.att_factor = max(att_factor, 0.0);
 }
 
+// -- Shadowmap --
+void testShadowMap(inout LightStruct lc, int i){
+	//project our 3D position to the shadowmap
+	vec4 proj_pos = u_lights_shadowmap_vpm[i] * vec4(v_world_position,1.0);
+	
+	//from homogeneus space to clip space
+	vec2 shadow_uv = proj_pos.xy / proj_pos.w;
+	
+	//from clip space to uv space
+	shadow_uv = shadow_uv * 0.5 + vec2(0.5);
+		
+	//get point depth [-1 .. +1] in non-linear space
+	float real_depth = (proj_pos.z - u_lights_shadow_bias[i]) / 
+	proj_pos.w;
+	
+	//normalize from [-1..+1] to [0..+1] still non-linear
+	real_depth = real_depth * 0.5 + 0.5;
+	
+	//read depth from depth buffer in [0..+1] non-linear
+	float shadow_depth = texture( u_lights_shadowmap[i], shadow_uv).x;
+	
+	//compute final shadow factor by comparing
+	lc.shadow_factor = 1.0;
+	
+	//we can compare them, even if they are not linear
+	if( shadow_depth < real_depth )
+		lc.shadow_factor = 0.0;
+		
+	//If directional we must see if it is outside on the sides
+	if(u_lights_type[i] == 3){
+		if( shadow_uv.x < 0.0 || shadow_uv.x > 1.0 ||shadow_uv.y < 0.0 || shadow_uv.y > 1.0 )
+			lc.shadow_factor = 1.0;
+
+		//it is before near or behind far plane
+		if(real_depth < 0.0 || real_depth > 1.0)
+			lc.shadow_factor = 1.0;
+	}
+}
+
 void main()
 {
 	vec2 uv = v_uv;
 	vec4 color = u_color;
-	color *= texture( u_texture, v_uv );
+	color *= texture( u_lights_shadowmap[0], v_uv );
 
 	if(color.a < u_alpha_cutoff)
 		discard;
@@ -208,7 +253,8 @@ void main()
 			0.0, // light dist
 
 			1.0, // spot factor
-			0.0 // attenuation factor
+			1.0, // attenuation factor
+			1.0 // shadow_factor
 		);
 
 		// Point
@@ -227,9 +273,13 @@ void main()
 			computeL_directional(LightComp, i);
 		}
 
+	if (u_lights_cast_shadows[i] == 1){
+		testShadowMap(LightComp, i);
+	}
+
 		computeNdotL(LightComp);
 		computeAttenuation(LightComp, i);
-		light += u_lights_color[i] * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor;
+		light += u_lights_color[i] * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor * LightComp.shadow_factor;
 	}
 	color.xyz *= light;
 	FragColor = color;
@@ -261,6 +311,11 @@ uniform vec3 u_light_direction;
 uniform float u_light_cone_cos;
 uniform float u_light_cone_exp;
 
+uniform int u_light_cast_shadows;
+uniform sampler2D u_light_shadowmap;
+uniform mat4 u_light_shadowmap_vpm;
+uniform float u_light_shadow_bias;
+
 out vec4 FragColor;
 
 // Save computations related to light
@@ -274,6 +329,7 @@ struct LightStruct{
 
 	float spot_factor;
 	float att_factor;
+	float shadow_factor;
 }LightComp;
 
 void computeL_point(inout LightStruct lc){
@@ -314,6 +370,45 @@ void computeAttenuation(inout LightStruct lc){
 	lc.att_factor = max(att_factor, 0.0);
 }
 
+// -- Shadowmap --
+void testShadowMap(inout LightStruct lc, vec3 pos){
+	//project our 3D position to the shadowmap
+	vec4 proj_pos = u_light_shadowmap_vpm * vec4(pos,1.0);
+	
+	//from homogeneus space to clip space
+	vec2 shadow_uv = proj_pos.xy / proj_pos.w;
+	
+	//from clip space to uv space
+	shadow_uv = shadow_uv * 0.5 + vec2(0.5);
+		
+	//get point depth [-1 .. +1] in non-linear space
+	float real_depth = (proj_pos.z - u_light_shadow_bias) / 
+	proj_pos.w;
+	
+	//normalize from [-1..+1] to [0..+1] still non-linear
+	real_depth = real_depth * 0.5 + 0.5;
+	
+	//read depth from depth buffer in [0..+1] non-linear
+	float shadow_depth = texture( u_light_shadowmap, shadow_uv).x;
+	
+	//compute final shadow factor by comparing
+	lc.shadow_factor = 1.0;
+	
+	//we can compare them, even if they are not linear
+	if( shadow_depth < real_depth )
+		lc.shadow_factor = 0.0;
+		
+	//If directional we muse see if it is outside on the sides
+	if(u_light_type == 3){
+		if( shadow_uv.x < 0.0 || shadow_uv.x > 1.0 ||shadow_uv.y < 0.0 || shadow_uv.y > 1.0 )
+			lc.shadow_factor = 1.0;
+
+		//it is before near or behind far plane
+		if(real_depth < 0.0 || real_depth > 1.0)
+			lc.shadow_factor = 1.0;
+	}
+}
+
 void main()
 {
 	LightComp = LightStruct(
@@ -325,12 +420,13 @@ void main()
 		0.0, // light dist
 
 		1.0, // spot factor
-		0.0 // attenuation factor
+		1.0, // attenuation factor
+		1.0 // shadow_factor
 	);
 
 	vec2 uv = v_uv;
 	vec4 color = u_color;
-	color *= texture( u_texture, v_uv );
+	color *= texture( u_light_shadowmap, v_uv );
 
 	if(color.a < u_alpha_cutoff)
 		discard;
@@ -354,8 +450,12 @@ void main()
 	}
 
 	computeNdotL(LightComp);
+
+	if (u_light_cast_shadows == 1){
+		testShadowMap(LightComp, v_world_position);
+	}
 	computeAttenuation(LightComp);
-	light += u_light_color * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor;
+	light += u_light_color * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor * LightComp.shadow_factor;
 	color.xyz *= light;
 	FragColor = color;
 }

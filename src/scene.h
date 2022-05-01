@@ -9,8 +9,11 @@
 //forward declaration
 class cJSON; 
 // EXISTE ESTA CLASE PERO NO TE DIGO COMO ES POR AHORA
-// HA EXPLICADO EL POR QUÉ NO HACE FALTA INCLUIR TODA LA CLASE PERO NO ME HE ENTERADO
+// COMO ES UN PUNTERO NO HACE FALTA INCLUIR LA CLASE ENTERA, SOLO DECIR QUE EXISTE PERO NO COMO ES
+// LO NORMAL ES QUE EN EL HEADER, SI SOLO USAMOS UN PUNTERO HACEMOS FORWARD DECLARATION
+// EN ESTE CASO EL HEADER NO LO NECESITA, A NO SER QUE NECESITEMOS GUARDAR ESPACIO EN MEMORIA PARA ESE OBJETO
 class FBO;
+class Texture;
 
 
 //our namespace
@@ -26,7 +29,7 @@ namespace GTR {
 
 	class Scene;
 	class Prefab;
-	class Light;
+	//class Light;
 	class Node;
 
 	//represents one element of the scene (could be lights, prefabs, cameras, etc)
@@ -71,6 +74,12 @@ namespace GTR {
 		Vector3 color;
 		float intensity;
 		int light_type;
+		bool cast_shadows;
+		float shadow_bias;
+
+		FBO* fbo;
+		Texture* shadowmap;
+		Camera* light_camera;
 
 		// PARA LA ATENUACIÓN -- HAY QUE TENERLO EN CUENTA EN EL SHADER
 		// ES MEJOR UNA ATENUACIÓN QUADRÁTICA YA QUE ES MÁS NATURAL QUE UNA LINEAL POR LA FORMA DE LA CURVA

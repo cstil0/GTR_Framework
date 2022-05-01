@@ -14,6 +14,7 @@
 #include <cmath>
 #include <string>
 #include <cstdio>
+using namespace std;
 
 Application* Application::instance = nullptr;
 
@@ -253,6 +254,12 @@ void Application::renderDebugGUI(void)
 	ImGui::ColorEdit3("BG color", scene->background_color.v);
 	ImGui::ColorEdit3("Ambient Light", scene->ambient_light.v);
 	ImGui::Combo("Render Pipeline", &scene->typeOfRender, "SINGLEPASS\0MULTIPASS");// , GTR::Scene::eRenderPipeline::MULTIPASS));
+	
+	if (ImGui::TreeNode(renderer, "Shadowmap")) {
+		ImGui::Checkbox("Show Shadowmap", &renderer->show_shadowmap);
+		ImGui::Combo("Light Shadow to show", &renderer->shadowmap2show, "SPOT\0POINT\0POINT\0DIRECTIONAL");
+		ImGui::TreePop();
+	}
 
 	//add info to the debug panel about the camera
 	if (ImGui::TreeNode(camera, "Camera")) {

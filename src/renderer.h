@@ -1,5 +1,7 @@
 #pragma once
 #include "prefab.h"
+#include <string>
+
 
 //forward declarations
 class Camera;
@@ -14,8 +16,10 @@ namespace GTR {
 		Mesh* mesh;
 		Material* material;
 		Matrix44 model;
-		// A LOS QUE SEAN OPACOS LES SUMAMOS UN FACTOR MUY GRANDE PARA QUE SEQUEDEN AL FINAL
+		// A LOS QUE SEAN OPACOS LES SUMAMOS UN FACTOR MUY GRANDE PARA QUE SE QUEDEN AL FINAL
 		float distance_to_camera;
+		BoundingBox world_bounding;
+
 
 		RenderCall() {}
 		virtual ~RenderCall() {}
@@ -25,17 +29,27 @@ namespace GTR {
 	// Separating the render from anything else makes the code cleaner
 	class Renderer
 	{
-		std::vector<LightEntity*> lights;
 
 	public:
 		// Save only the visible nodes sorted by distance to the camera
 		// NOT SAVING A POINTER SINCE THEN IT CANNOT BE SORTED CORRECTLY
 		std::vector<RenderCall> render_calls;
+		std::vector<LightEntity*> lights;
+
+		FBO* fbo;
+		Texture* shadowmap;
+
+		bool show_shadowmap;
+		int shadowmap2show;
+
+		Renderer();
 
 		//std::vector<LightEntity*> lights; // PARA TENER PRECALCULADAS LAS LUCES Y NO TENER QUE HACERLO EN CADA RENDER, PERO NO HE ENTENDIDO POR QUÉ
 
 		//add here your functions
 		void renderScene_RenderCalls(GTR::Scene* scene, Camera* camera);
+
+		void showShadowmap(LightEntity* light);
 
 		//renders several elements of the scene
 		void renderScene(GTR::Scene* scene, Camera* camera);
@@ -48,7 +62,11 @@ namespace GTR {
 
 		//to render one mesh given its material and transformation matrix
 		void renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
-	
+
+		void renderFlatMesh(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
+		void generateShadowmap(LightEntity* light);
+		void assignShadowmap(LightEntity* light);
+
 		// Functions to manage the rendercalls vector
 		void createRenderCalls(GTR::Scene* scene, Camera* camera);
 		void sortRenderCalls();

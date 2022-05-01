@@ -768,6 +768,14 @@ void Shader::setIntArray(const char* varname, int* i_array, int num)
 	assert(glGetError() == GL_NO_ERROR);
 }
 
+void Shader::setTextureArray(const char* varname, Texture* t_vector, int num, int slot)
+{
+	glActiveTexture(GL_TEXTURE0 + slot);
+	glBindTexture(t_vector->texture_type, t_vector->texture_id);
+	setUniform1(varname, slot);
+	glActiveTexture(GL_TEXTURE0 + slot);
+}
+
 void Shader::init()
 {
 	static bool firsttime = true;

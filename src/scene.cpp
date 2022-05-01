@@ -185,14 +185,20 @@ GTR::LightEntity::LightEntity()
 {
 	entity_type = LIGHT;
 	light_type = LightEntity::eTypeOfLight::NONE;
-	//light = NULL;
 	color.set(0, 0, 0);
 	intensity = 0;
 	max_distance = 0;
-	// A DETERMINAR
 	cone_angle = 0;
 	cone_exp = 0;
 	area_size = 0;
+
+	cast_shadows = false;
+	shadow_bias = 0;
+
+	light_camera = NULL;
+	fbo = NULL;
+	shadowmap = NULL;
+	light_camera = NULL;
 }
 
 void GTR::LightEntity::renderInMenu() {
@@ -214,6 +220,8 @@ void GTR::LightEntity::renderInMenu() {
 	ImGui::ColorEdit3("Color", color.v);
 	ImGui::SliderFloat("Intensity", &intensity, 0.0, 10);
 	ImGui::SliderFloat("Maximum Distance", &max_distance, 0.0, 1000);
+	ImGui::Checkbox("Shadows", &cast_shadows);
+	ImGui::SliderFloat("Shadow Bias", &shadow_bias, 0.00001, 0.5);
 
 	if (light_type == LightEntity::eTypeOfLight::SPOT) {
 		ImGui::SliderFloat("Cone Angle", &cone_angle, 0.0, 80);
@@ -245,4 +253,6 @@ void GTR::LightEntity::configure(cJSON* json)
 	max_distance = readJSONNumber(json, "max_dist", max_distance);
 	cone_angle = readJSONNumber(json, "cone_angle", cone_angle);
 	cone_exp = readJSONNumber(json, "cone_exp", cone_angle);
+	cast_shadows = readJSONBool(json, "cast_shadows", false);
+	shadow_bias = readJSONNumber(json, "shadow_bias", shadow_bias);
 }
