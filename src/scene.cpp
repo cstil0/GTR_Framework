@@ -93,6 +93,18 @@ bool GTR::Scene::load(const char* filename)
 			ent->model.translate(position.x, position.y, position.z);
 		}
 
+		if (cJSON_GetObjectItem(entity_json, "angle_x"))
+		{
+			float angle = cJSON_GetObjectItem(entity_json, "angle_x")->valuedouble;
+			ent->model.rotate(angle * DEG2RAD, Vector3(1, 0, 0));
+		}
+
+		if (cJSON_GetObjectItem(entity_json, "angle_y"))
+		{
+			float angle = cJSON_GetObjectItem(entity_json, "angle_y")->valuedouble;
+			ent->model.rotate(angle * DEG2RAD, Vector3(0, 0, -1));
+		}
+
 		if (cJSON_GetObjectItem(entity_json, "angle"))
 		{
 			float angle = cJSON_GetObjectItem(entity_json, "angle")->valuedouble;

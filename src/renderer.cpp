@@ -516,7 +516,7 @@ void GTR::Renderer::generateShadowmap(LightEntity* light)
 		//light_camera->setOrthographic(-app->window_width/2, app->window_width/2, -app->window_height/2, app->window_height/2, 0.01, 1000);
 
 		//light->model.setTranslation(light_cam_pos.x, light_cam_pos.y, light_cam_pos.z);
-		light_camera->lookAt(light->model.getTranslation(), light->model.rotateVector(Vector3(0, 0, 1)), light->model.rotateVector(Vector3(0, 1, 0)));
+		light_camera->lookAt(light->model.getTranslation(), light->model.rotateVector(Vector3(0, 0, -1)), light->model.rotateVector(Vector3(0, 1, 0)));
 		//light_camera->lookAt(light_cam_pos, light->model.rotateVector(Vector3(0, 0, -1)), light->model.rotateVector(Vector3(0, 1, 0)));
 	}
 	// EMPEZAMOS A PINTAR TODA LA ESCENA EN LA TEXTURA
