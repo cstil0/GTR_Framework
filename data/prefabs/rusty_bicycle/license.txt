@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rusty Bicycle
+* source:	https://sketchfab.com/3d-models/rusty-bicycle-08d23d386ea54399bf56e5f01a392674
+* author:	Piotr "Pjot" Dyderski (https://sketchfab.com/zachiar)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Rusty Bicycle" (https://sketchfab.com/3d-models/rusty-bicycle-08d23d386ea54399bf56e5f01a392674) by Piotr "Pjot" Dyderski (https://sketchfab.com/zachiar) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
