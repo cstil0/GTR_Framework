@@ -73,7 +73,7 @@ namespace GTR {
 
 		void renderFlatMesh(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
 		void generateShadowmap(LightEntity* light);
-		void assignShadowmap(LightEntity* light);
+		//void assignShadowmap(LightEntity* light);
 
 		// Functions to manage the rendercalls vector
 		void createRenderCalls(GTR::Scene* scene, Camera* camera);

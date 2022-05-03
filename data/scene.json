@@ -23,7 +23,7 @@
 			"name":"car2",
 			"type":"PREFAB",
 			"filename":"prefabs/toyota_land_cruiser/scene.gltf",
-			"position":[-85.812,0,233],
+			"position":[-85.812,0.01,233],
 			"angle":214.9,
 			"scale": [1.11, 1.11, 1.11]
 		},

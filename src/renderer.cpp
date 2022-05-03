@@ -191,14 +191,6 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	if (texture == NULL)
 		texture = Texture::getWhiteTexture(); //a 1x1 white texture
 
-	//select the blending
-	if (material->alpha_mode == GTR::eAlphaMode::BLEND)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-	else
-		glDisable(GL_BLEND);
 
 	//select if render both sides of the triangles
 	if(material->two_sided)
@@ -263,6 +255,16 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	// Light parameters
 	// -- Single Pass --
 	if (scene->typeOfRender == Scene::eRenderPipeline::SINGLEPASS) {
+
+		//select the blending
+		if (material->alpha_mode == GTR::eAlphaMode::BLEND)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else
+			glDisable(GL_BLEND);
+
 		// Define some variables to store lights information
 		std::vector<int> lights_type;
 		std::vector<Vector3> lights_position;
@@ -347,7 +349,9 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 		Vector3 ambient_light = scene->ambient_light;
 		// To know if there is any light visible
-		bool any_visible= false;
+		bool any_visible = false;
+		// Necesitamos este boolean por que si la primera luz no está visible, no se activará el blending en la primera iteración de los materiales transparentes por el continue del primer if
+		bool is_first = true;
 
 		for (int i = 0; i < lights.size(); ++i) {
 			LightEntity* light = lights[i];
@@ -355,8 +359,23 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 			if (!lights[i]->visible)
 				continue;
 
+			if (is_first) {
+				if (material->alpha_mode == GTR::eAlphaMode::BLEND)
+				{
+					glEnable(GL_BLEND);
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				}
+				else
+					glDisable(GL_BLEND);
+			}
+			// Si se está mostrando alguna textura en debug, renderizamos una sola vez
+			else if (texture2show != eTextureType::COMPLETE)
+				continue;
+
 			// There is at least one visible light
 			any_visible = true;
+			// Si hemos llegado hasta aquí, ya hemos pasado de la primera luz
+			is_first = false;
 
 			// Pass to the shader
 			shader->setUniform("u_light_type", light->light_type);
@@ -385,6 +404,8 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 			// Activate blending again for the rest of lights to do the interpolation
 			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
 
 			// Reset ambient light to add it only once
 			ambient_light = vec3(0.0, 0.0, 0.0);
@@ -534,8 +555,9 @@ void GTR::Renderer::generateShadowmap(LightEntity* light)
 		// SI EL MATERIAL ES TRANSPARENTE NO LO PONEMOS EN EL SHADOWMAP YA QUE NO CASTEA SOMBRAS
 		if (rc.material->alpha_mode == eAlphaMode::BLEND)
 			continue;
-		if (light_camera->testBoxInFrustum(rc.world_bounding.center, rc.world_bounding.halfsize))
+		if (light_camera->testBoxInFrustum(rc.world_bounding.center, rc.world_bounding.halfsize)) {
 			renderFlatMesh(rc.model, rc.mesh, rc.material, light_camera);
+		}
 	}
 
 	// VOLVEMOS A DEJAR EL SISTEMA COMO NOS LO ENCONTRAMOS AL PRINCIPIO PARA NO LIARLA
