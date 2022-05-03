@@ -16,14 +16,14 @@
 			"name":"car1",
 			"type":"PREFAB",
 			"filename":"prefabs/gmc/scene.gltf",
-			"position":[-80,0,-100],
+			"position":[-80,-3.6,-100],
 			"angle":-45
 		},
 		{
 			"name":"car2",
 			"type":"PREFAB",
 			"filename":"prefabs/toyota_land_cruiser/scene.gltf",
-			"position":[-85.812,0.01,233],
+			"position":[-85.812,-1.7,233],
 			"angle":214.9,
 			"scale": [1.11, 1.11, 1.11]
 		},
@@ -86,10 +86,10 @@
 		{
 			"name":"spot",
 			"type":"LIGHT",
-			"position":[22.665,12.8,12.631],
+			"position":[12.4,31,2.3],
 			"angle": 141,
 			"color":[1,0.9,0.8],
-			"intensity":2.2,
+			"intensity":6.6,
 			"max_dist":1000,
 			"cone_angle":80,
 			"cone_exp":7.3,
@@ -100,13 +100,13 @@
 		{
 			"name":"spot2",
 			"type":"LIGHT",
-			"position":[-14.042,12.8,134.62],
-			"angle": 57.5,
+			"position":[-24.8,31,155.5],
+			"angle": 50.22,
 			"color":[1,0.9,0.8],
-			"intensity":4.6,
+			"intensity":7.3,
 			"max_dist":1000,
-			"cone_angle":39.5,
-			"cone_exp":18.5,
+			"cone_angle":35.1,
+			"cone_exp":23,
 			"light_type":"SPOT",
 			"cast_shadows": true,
 			"shadow_bias": 0.001

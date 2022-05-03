@@ -104,10 +104,8 @@ void Application::render(void)
 	//Matrix44 model;
 	//renderer->renderPrefab( model, prefab, camera );
 
-	// ANTIC RENDER
 	//renderer->renderScene(scene, camera);
 
-	// NOU RENDER
 	// Use the renderCalls function to render the scene with sorted objects
 	renderer->renderScene_RenderCalls(scene, camera);
 
@@ -255,15 +253,8 @@ void Application::renderDebugGUI(void)
 	ImGui::ColorEdit3("Ambient Light", scene->ambient_light.v);
 	ImGui::Combo("Render Pipeline", &scene->typeOfRender, "SINGLEPASS\0MULTIPASS");// , GTR::Scene::eRenderPipeline::MULTIPASS));
 	
-	// AIXÒ S'HAURIA DE POSAR EN UN RENDER MENU DE RENDERER!
-	if (ImGui::TreeNode(renderer, "Shadowmap")) {
-		ImGui::Checkbox("Show Shadowmap", &renderer->show_shadowmap);
-		ImGui::Combo("Light Shadow to show", &renderer->shadowmap2show, "SPOT\0POINT\0POINT\0DIRECTIONAL");
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode(scene, "Textures")) {
-		ImGui::Combo("Texture to show", &renderer->texture2show, "COMPLETE\0NORMAL\0OCCLUSION\0EMISSIVE");
+	if (ImGui::TreeNode("Debug Tools") ){
+			renderer->renderInMenu();
 		ImGui::TreePop();
 	}
 

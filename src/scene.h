@@ -8,13 +8,8 @@
 
 //forward declaration
 class cJSON; 
-// EXISTE ESTA CLASE PERO NO TE DIGO COMO ES POR AHORA
-// COMO ES UN PUNTERO NO HACE FALTA INCLUIR LA CLASE ENTERA, SOLO DECIR QUE EXISTE PERO NO COMO ES
-// LO NORMAL ES QUE EN EL HEADER, SI SOLO USAMOS UN PUNTERO HACEMOS FORWARD DECLARATION
-// EN ESTE CASO EL HEADER NO LO NECESITA, A NO SER QUE NECESITEMOS GUARDAR ESPACIO EN MEMORIA PARA ESE OBJETO
 class FBO;
 class Texture;
-
 
 //our namespace
 namespace GTR {
@@ -41,9 +36,10 @@ namespace GTR {
 		eEntityType entity_type;
 		Matrix44 model;
 		bool visible;
+
 		BaseEntity() { entity_type = NONE; visible = true; }
 		virtual ~BaseEntity() {}
-		// VIRTUAL NOS INDICA QUE ESTA FUNCIÓN CAMBIARÁ DEPENDIENDO DE LA HERENCIA
+
 		virtual void renderInMenu();
 		virtual void configure(cJSON* json) {}
 	};
@@ -60,6 +56,7 @@ namespace GTR {
 		virtual void configure(cJSON* json);
 	};
 
+	// represent a light in the scene
 	class LightEntity : public GTR::BaseEntity {
 	public:
 		enum eTypeOfLight {
@@ -70,29 +67,25 @@ namespace GTR {
 		};
 
 		std::string filename;
-		//Light* light;
 		Vector3 color;
 		float intensity;
 		int light_type;
+
 		bool cast_shadows;
 		float shadow_bias;
+
+		float max_distance;
+		float cone_angle;
+		float cone_exp;
+		float area_size;
+		Vector3 target;
 
 		FBO* fbo;
 		Texture* shadowmap;
 		Camera* light_camera;
 
-		// PARA LA ATENUACIÓN -- HAY QUE TENERLO EN CUENTA EN EL SHADER
-		// ES MEJOR UNA ATENUACIÓN QUADRÁTICA YA QUE ES MÁS NATURAL QUE UNA LINEAL POR LA FORMA DE LA CURVA
-		float max_distance;
-		float cone_angle;
-		float cone_exp;
-		float area_size;
-
-		// SON PUNTEROS POR QUE SI UNA LUZ NO CREA SOMBRAS ASI NO PERDEMOS ESPACIO EN MEMORIA
-		//FBO* fbo;
-		//bool cast_shadows;
-
 		LightEntity();
+
 		virtual void renderInMenu();
 		virtual void configure(cJSON* json);
 	};
@@ -117,9 +110,7 @@ namespace GTR {
 		Scene();
 
 		std::string filename;
-		// Esto es un contenedor --> esto tiene objetos de la clase base de entity, pero podemos estar guardando
-		// cualquier objeto hijo de esta clase. Para saber de qué tipo es cada uno, tenemos un enum dentro de la clase
-		// que nos lo chiva y de esta forma podemos hacer un cast y acceder a propiedades específicas de los hijos
+		// entities in the scene
 		std::vector<BaseEntity*> entities;
 
 		void clear();
@@ -127,9 +118,7 @@ namespace GTR {
 
 		bool load(const char* filename);
 		BaseEntity* createEntity(std::string type);
-
 	};
-
 };
 
 #endif

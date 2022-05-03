@@ -121,7 +121,9 @@ uniform float u_time;
 uniform float u_alpha_cutoff;
 uniform vec3 u_camera_position;
 
+// Textures
 uniform sampler2D u_texture;
+uniform int u_normal_text_bool;
 uniform sampler2D u_normal_texture;
 uniform sampler2D u_emissive_texture;
 uniform sampler2D u_occlusion_texture;
@@ -131,7 +133,6 @@ uniform int u_texture2show;
 // Light parameters
 uniform vec3 u_ambient_light;
 
-// -- Single Pass
 #define MAX_LIGHTS 10
 uniform int u_lights_type[MAX_LIGHTS];
 uniform vec3 u_lights_position[MAX_LIGHTS];
@@ -147,6 +148,7 @@ uniform mat4 u_lights_shadowmap_vpm[MAX_LIGHTS];
 uniform float u_lights_shadow_bias[MAX_LIGHTS];
 
 out vec4 FragColor;
+
 // Save computations related to light
 struct LightStruct{
 	vec3 L;
@@ -162,6 +164,7 @@ struct LightStruct{
 	float shadow_factor;
 }LightComp;
 
+// --- Functions ---
 mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
 {
 	// get edge vectors of the pixel triangle
@@ -186,6 +189,7 @@ vec3 perturbNormal(vec3 N, vec3 WP, vec2 uv, vec3 normal_pixel)
 	return normalize(TBN * normal_pixel);
 }
 
+// L vector for point and spot lights
 void computeL_point(inout LightStruct lc, int i){
 	// Distance from current point to light
 	vec3 L = u_lights_position[i] - v_world_position;
@@ -195,8 +199,11 @@ void computeL_point(inout LightStruct lc, int i){
 	lc.L = L/lc.light_dist;
 }
 
+// L vector for directional light
 void computeL_directional(inout LightStruct lc, int i){
-	vec3 L = normalize(u_lights_position[i]);
+	// All points take the same light direction
+	//vec3 L = u_lights_position[i] - v_world_position;
+	vec3 L = u_lights_direction[i];
 	lc.light_dist = length(L);
 	lc.L = L/lc.light_dist;
 }
@@ -205,7 +212,11 @@ void computeNdotL(inout LightStruct lc){
 	vec3 V = normalize(u_camera_position - v_world_position);
 	vec3 normal_pixel = texture2D( u_normal_texture, v_uv ).xyz; 
 	vec3 N = normalize(v_normal);
-	lc.N = perturbNormal(N, V, v_uv, normal_pixel);
+	// if there is a normal texture, compute the normal according to it
+	if (u_normal_text_bool == 1)
+		lc.N = perturbNormal(N, V, v_uv, normal_pixel);
+	else
+		lc.N = N;
 
 	lc.NdotL = clamp(dot(lc.L,lc.N), 0.0, 1.0);
 }
@@ -213,8 +224,9 @@ void computeNdotL(inout LightStruct lc){
 void computeSpotFactor(inout LightStruct lc, int i){
 	lc.D = normalize(u_lights_direction[i]);
 	lc.LdotD = dot(-lc.L, lc.D);
+	// check if point inside the spotlight
 	if (lc.LdotD >= u_lights_cone_cos[i]){
-		// How much point is inside spotlight
+		// compute how much it is inside
 		lc.spot_factor = pow(lc.LdotD, u_lights_cone_exp[i]);	
 	}
 	else{
@@ -225,10 +237,11 @@ void computeSpotFactor(inout LightStruct lc, int i){
 void computeAttenuation(inout LightStruct lc, int i){
 	float att_factor = u_lights_max_distance[i] - lc.light_dist;
 	att_factor /= u_lights_max_distance[i];
-	lc.att_factor = max(att_factor, 0.0);
+	att_factor = max(att_factor, 0.0);
+	// apply quadratic attenuation
+	lc.att_factor = pow(att_factor,2);
 }
 
-// -- Shadowmap --
 void testShadowMap(inout LightStruct lc, int i){
 	//project our 3D position to the shadowmap
 	vec4 proj_pos = u_lights_shadowmap_vpm[i] * vec4(v_world_position,1.0);
@@ -256,7 +269,7 @@ void testShadowMap(inout LightStruct lc, int i){
 	if( shadow_depth < real_depth )
 		lc.shadow_factor = 0.0;
 		
-	//If directional we must see if it is outside on the sides
+	//If directional we must see if it is outside the sides
 	if(u_lights_type[i] == 3){
 		if( shadow_uv.x < 0.0 || shadow_uv.x > 1.0 ||shadow_uv.y < 0.0 || shadow_uv.y > 1.0 )
 			lc.shadow_factor = 1.0;
@@ -293,7 +306,6 @@ void main()
 			1.0, // attenuation factor
 			1.0 // shadow_factor
 		);
-
 		// Point
 		if (u_lights_type[i] == 1){
 			computeL_point(LightComp, i);
@@ -310,18 +322,21 @@ void main()
 			computeL_directional(LightComp, i);
 		}
 
+// didn't make it to pass multiple textures to the shader so shadowmaps are not working for singlepass
 //	if (u_lights_cast_shadows[i] == 1){
 //		testShadowMap(LightComp, i);
 //	}
 
 		computeNdotL(LightComp);
 		computeAttenuation(LightComp, i);
-		light += u_lights_color[i] * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor * LightComp.shadow_factor;
+		light += u_lights_color[i] * LightComp.NdotL * LightComp.att_factor * LightComp.spot_factor * LightComp.shadow_factor;
 	}
 
 	// Apply other textures
+	// Emissive
 	light += texture( u_emissive_texture, v_uv ).xyz;
 
+	// Occlusion
 	// x coord has occlusion map
 	light *= texture( u_met_rough_texture, v_uv ).x;
 	// Occlusion can be either in the met_rou or occlusion texture
@@ -330,7 +345,6 @@ void main()
 	color.xyz *= light;
 
 	// Debug textures
-	// SERIA BONIC NO FER TOT LO DE SOBRE SI EL TIPUS ES DIFERENT DE 0 O GUARDAR-HO EN VARIABLES
 	// Normal
 	if (u_texture2show == 1){
 		color.xyz = LightComp.N;
@@ -364,6 +378,7 @@ uniform float u_time;
 uniform float u_alpha_cutoff;
 
 uniform sampler2D u_texture;
+uniform int u_normal_text_bool;
 uniform sampler2D u_normal_texture;
 uniform sampler2D u_emissive_texture;
 uniform sampler2D u_occlusion_texture;
@@ -373,6 +388,7 @@ uniform int u_texture2show;
 // Light parameters
 uniform vec3 u_ambient_light;
 
+// Textures
 uniform int u_light_type;
 uniform vec3 u_light_position;
 uniform vec3 u_light_color;
@@ -403,6 +419,7 @@ struct LightStruct{
 	float shadow_factor;
 }LightComp;
 
+// --- Functions ---
 mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
 {
 	// get edge vectors of the pixel triangle
@@ -427,6 +444,7 @@ vec3 perturbNormal(vec3 N, vec3 WP, vec2 uv, vec3 normal_pixel)
 	return normalize(TBN * normal_pixel);
 }
 
+// L vector for point and spot lights
 void computeL_point(inout LightStruct lc){
 	// Distance from current point to light
 	vec3 L = u_light_position - v_world_position;
@@ -436,8 +454,10 @@ void computeL_point(inout LightStruct lc){
 	lc.L = L/lc.light_dist;
 }
 
+// L vector for directional light
 void computeL_directional(inout LightStruct lc){
-	vec3 L = normalize(u_light_position);
+	// All points take the same light direction
+	vec3 L = u_light_direction;
 	lc.light_dist = length(L);
 	lc.L = L/lc.light_dist;
 }
@@ -446,7 +466,11 @@ void computeNdotL(inout LightStruct lc){
 	vec3 V = normalize(u_camera_position - v_world_position);
 	vec3 normal_pixel = texture2D( u_normal_texture, v_uv ).xyz; 
 	vec3 N = normalize(v_normal);
-	lc.N = perturbNormal(N, V, v_uv, normal_pixel);
+	// if there is a normal texture, compute the normal according to it
+	if (u_normal_text_bool == 1)
+		lc.N = perturbNormal(N, V, v_uv, normal_pixel);
+	else
+		lc.N = N;
 
 	lc.NdotL = clamp(dot(lc.L,lc.N), 0.0, 1.0);
 }
@@ -454,8 +478,9 @@ void computeNdotL(inout LightStruct lc){
 void computeSpotFactor(inout LightStruct lc){
 	lc.D = normalize(u_light_direction);
 	lc.LdotD = dot(-lc.L, lc.D);
+	// check if point inside the spotlight
 	if (lc.LdotD >= u_light_cone_cos){
-		// How much point is inside spotlight
+		// compute how much it is inside
 		lc.spot_factor = pow(lc.LdotD, u_light_cone_exp);	
 	}
 	else{
@@ -466,11 +491,11 @@ void computeSpotFactor(inout LightStruct lc){
 void computeAttenuation(inout LightStruct lc){
 	float att_factor = u_light_max_distance - lc.light_dist;
 	att_factor /= u_light_max_distance;
-	lc.att_factor = max(att_factor, 0.0);
+	att_factor = max(att_factor, 0.0);
+	// apply quadratic attenuation
+	lc.att_factor = pow(att_factor,2);
 }
 
-
-// -- Shadowmap --
 void testShadowMap(inout LightStruct lc, vec3 pos){
 	//project our 3D position to the shadowmap
 	vec4 proj_pos = u_light_shadowmap_vpm * vec4(pos,1.0);
@@ -498,7 +523,7 @@ void testShadowMap(inout LightStruct lc, vec3 pos){
 	if( shadow_depth < real_depth )
 		lc.shadow_factor = 0.0;
 		
-	//If directional we muse see if it is outside on the sides
+	//If directional we must see if it is outside the sides
 	if(u_light_type == 3){
 		if( shadow_uv.x < 0.0 || shadow_uv.x > 1.0 ||shadow_uv.y < 0.0 || shadow_uv.y > 1.0 )
 			lc.shadow_factor = 1.0;
@@ -550,17 +575,21 @@ void main()
 		computeL_directional(LightComp);
 	}
 
+	//if (LightComp.light_dist <= u_light_max_distance){
 	computeNdotL(LightComp);
 
 	if (u_light_cast_shadows == 1){
 		testShadowMap(LightComp, v_world_position);
 	}
 	computeAttenuation(LightComp);
-	light += u_light_color * LightComp.NdotL * pow(LightComp.att_factor,2) * LightComp.spot_factor * LightComp.shadow_factor;
+	light += u_light_color * LightComp.NdotL * LightComp.att_factor * LightComp.spot_factor * LightComp.shadow_factor;
+	//}
 
 	// Apply other textures
+	// Emissive
 	light += texture( u_emissive_texture, v_uv ).xyz;
 
+	// Occlusion
 	// x coord has occlusion map
 	light *= texture( u_met_rough_texture, v_uv ).x;
 	// Occlusion can be either in the met_rou or occlusion texture
@@ -569,7 +598,6 @@ void main()
 	color.xyz *= light;
 
 	// Debug textures
-	// SERIA BONIC NO FER TOT LO DE SOBRE SI EL TIPUS ES DIFERENT DE 0 O GUARDAR-HO EN VARIABLES
 	// Normal
 	if (u_texture2show == 1){
 		color.xyz = LightComp.N;

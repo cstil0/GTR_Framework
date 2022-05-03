@@ -25,7 +25,6 @@ void GTR::Scene::clear()
 	entities.resize(0);
 }
 
-
 void GTR::Scene::addEntity(BaseEntity* entity)
 {
 	entities.push_back(entity); entity->scene = this;
@@ -53,8 +52,6 @@ bool GTR::Scene::load(const char* filename)
 	}
 
 	//read global properties
-	// SE REPTE LA VARIABLE DENTRO DE LA FUNCIÓN POR QUÉ SI NO ENCUENTRA ESE VALOR EN EL JSON
-	// LE ASIGNA EL QUE YA TENÍA -- ES UN PEQUEÑO HACK
 	background_color = readJSONVector3(json, "background_color", background_color);
 	ambient_light = readJSONVector3(json, "ambient_light", ambient_light );
 	main_camera.eye = readJSONVector3(json, "camera_position", main_camera.eye);
@@ -93,6 +90,7 @@ bool GTR::Scene::load(const char* filename)
 			ent->model.translate(position.x, position.y, position.z);
 		}
 
+		// Add rotation for x and y axis
 		if (cJSON_GetObjectItem(entity_json, "angle_x"))
 		{
 			float angle = cJSON_GetObjectItem(entity_json, "angle_x")->valuedouble;
@@ -105,6 +103,7 @@ bool GTR::Scene::load(const char* filename)
 			ent->model.rotate(angle * DEG2RAD, Vector3(0, 0, -1));
 		}
 
+		// z axis rotation
 		if (cJSON_GetObjectItem(entity_json, "angle"))
 		{
 			float angle = cJSON_GetObjectItem(entity_json, "angle")->valuedouble;
@@ -195,6 +194,7 @@ void GTR::PrefabEntity::renderInMenu()
 
 GTR::LightEntity::LightEntity()
 {
+	// Initialize to zero all variables
 	entity_type = LIGHT;
 	light_type = LightEntity::eTypeOfLight::NONE;
 	color.set(0, 0, 0);
@@ -202,7 +202,9 @@ GTR::LightEntity::LightEntity()
 	max_distance = 0;
 	cone_angle = 0;
 	cone_exp = 0;
+
 	area_size = 0;
+	target = vec3(0.0, 0.0, 0.0);
 
 	cast_shadows = false;
 	shadow_bias = 0;
@@ -218,8 +220,6 @@ void GTR::LightEntity::renderInMenu() {
 	BaseEntity::renderInMenu();
 #ifndef SKIP_IMGUI
 	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
-	//if (ImGui::TreeNode(light, "Light Info"))
-	//{
 
 	std::string type_str;
 	switch (light_type) {
@@ -232,16 +232,20 @@ void GTR::LightEntity::renderInMenu() {
 	ImGui::ColorEdit3("Color", color.v);
 	ImGui::SliderFloat("Intensity", &intensity, 0.0, 10);
 	ImGui::SliderFloat("Maximum Distance", &max_distance, 0.0, 1000);
-	ImGui::Checkbox("Shadows", &cast_shadows);
-	ImGui::SliderFloat("Shadow Bias", &shadow_bias, 0.00001, 0.5);
 
+	// Show the parameters depending on the type of light
 	if (light_type == LightEntity::eTypeOfLight::SPOT) {
 		ImGui::SliderFloat("Cone Angle", &cone_angle, 0.0, 80);
 		ImGui::SliderFloat("Cone Exponential", &cone_exp, 0.0, 100);
 	}
-		//ImGui::TreePop();
-		//}
-
+	else if (light_type == LightEntity::eTypeOfLight::DIRECTIONAL){
+		ImGui::SliderFloat("Area Size", &area_size, 0.0, 2000);
+		ImGui::DragFloat3("Target", &target.x, 1, -80, 80);
+	}
+	if (cast_shadows) {
+		ImGui::Checkbox("Shadows", &cast_shadows);
+		ImGui::SliderFloat("Shadow Bias", &shadow_bias, 0.00001, 0.5);
+	}
 #endif
 
 }
