@@ -246,6 +246,16 @@ void Application::renderDebugGUI(void)
 	ImGui::Checkbox("Wireframe", &render_wireframe);
 	ImGui::ColorEdit3("BG color", scene->background_color.v);
 	ImGui::ColorEdit3("Ambient Light", scene->ambient_light.v);
+<<<<<<< Updated upstream
+=======
+	ImGui::Combo("Lights shader", &scene->typeOfRender, "SINGLEPASS\0MULTIPASS", 2);// , GTR::Scene::eRenderPipeline::MULTIPASS));
+	ImGui::Combo("Pipeline", (int*)&renderer->pipeline, "FORWARD\0DEFERRED", 2);
+	
+	if (ImGui::TreeNode("Debug Tools")) {
+		renderer->renderInMenu();
+		ImGui::TreePop();
+	}
+>>>>>>> Stashed changes
 
 	//add info to the debug panel about the camera
 	if (ImGui::TreeNode(camera, "Camera")) {
