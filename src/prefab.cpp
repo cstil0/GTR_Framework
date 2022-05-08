@@ -198,6 +198,8 @@ void Prefab::updateBounding()
 
 std::map<std::string, Prefab*> Prefab::sPrefabsLoaded;
 
+// Usar managers nos salvan bastante la ejecución, para no tener que acceder al disco duro cada vez que 
+// queremos cargar un fichero y tampoco tener que cargarlo todo en variables y luego ir a buscarlas
 Prefab* Prefab::Get(const char* filename)
 {
 	assert(filename);

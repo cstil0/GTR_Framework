@@ -20,8 +20,7 @@ namespace GTR {
 		};
 
 	public:
-<<<<<<< Updated upstream
-=======
+
 		// Save only the visible nodes sorted by distance to the camera
 		std::vector<RenderCall> render_calls;
 		// Save all lights in the scene
@@ -32,13 +31,9 @@ namespace GTR {
 		FBO* fbo;
 		Texture* shadowmap;
 		ePipeline pipeline;
->>>>>>> Stashed changes
 
 		//add here your functions
 		//...
-
-<<<<<<< Updated upstream
-=======
 
 
 		Renderer();
@@ -55,7 +50,6 @@ namespace GTR {
 		void generateShadowmap(LightEntity* light);
 
 		// -- Render functions --
->>>>>>> Stashed changes
 		//renders several elements of the scene
 		void renderScene(GTR::Scene* scene, Camera* camera);
 	
@@ -67,8 +61,6 @@ namespace GTR {
 
 		//to render one mesh given its material and transformation matrix
 		void renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
-<<<<<<< Updated upstream
-=======
 		void setTextures(GTR::Material* material, Shader* shader);
 		void setSinglepass_parameters(GTR::Material* material, Shader* shader, Mesh* mesh);
 		void setMultipassParameters(GTR::Material* material, Shader* shader, Mesh* mesh);
@@ -78,7 +70,6 @@ namespace GTR {
 		void renderForward(Camera* camera);
 		void renderDeferred(Camera* camera);
 		void renderInMenu();
->>>>>>> Stashed changes
 	};
 
 	Texture* CubemapFromHDRE(const char* filename);

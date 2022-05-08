@@ -13,9 +13,6 @@
 
 using namespace GTR;
 
-<<<<<<< Updated upstream
-=======
-
 GTR::Renderer::Renderer()
 {
 	show_shadowmap = false;
@@ -218,9 +215,6 @@ void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 	}
 }
 
-<<<<<<< Updated upstream
-=======
-
 // To render the scene according to the rendercalls vector
 void Renderer::renderScene_RenderCalls(GTR::Scene* scene, Camera* camera){
 	//set the clear color (the background color)
@@ -369,10 +363,8 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//disable shader
 	shader->disable();
 
-<<<<<<< Updated upstream
 	//set the render state as it was before to avoid problems with future renders
 	glDisable(GL_BLEND);
-=======
 void GTR::Renderer::renderForward(Camera* camera)
 {
 	//render rendercalls
@@ -398,7 +390,6 @@ void GTR::Renderer::renderInMenu() {
 	ImGui::Checkbox("Show Shadowmap", &show_shadowmap);
 	ImGui::Combo("Shadowmaps", &debug_shadowmap, "SPOT1\0SPOT2\0POINT1\0POINT2\0POINT3\0POINT4\0POINT5\0DIRECTIONAL");
 	ImGui::Combo("Textures", &debug_texture, "COMPLETE\0NORMAL\0OCCLUSION\0EMISSIVE");
->>>>>>> Stashed changes
 }
 
 

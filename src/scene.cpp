@@ -2,14 +2,17 @@
 #include "utils.h"
 
 #include "prefab.h"
+#include "light.h"
 #include "extra/cJSON.h"
+  
 
 GTR::Scene* GTR::Scene::instance = NULL;
 
 GTR::Scene::Scene()
 {
 	instance = this;
-	
+	// Start with singlepass
+	typeOfRender = Scene::eRenderPipeline::MULTIPASS;
 }
 
 void GTR::Scene::clear()
@@ -21,7 +24,6 @@ void GTR::Scene::clear()
 	}
 	entities.resize(0);
 }
-
 
 void GTR::Scene::addEntity(BaseEntity* entity)
 {
@@ -72,6 +74,8 @@ bool GTR::Scene::load(const char* filename)
 
 		addEntity(ent);
 
+
+		// PROPIEDAES GENÉRICAS DE TODAS LAS ENTIDADES
 		if (cJSON_GetObjectItem(entity_json, "name"))
 		{
 			ent->name = cJSON_GetObjectItem(entity_json, "name")->valuestring;
@@ -86,6 +90,20 @@ bool GTR::Scene::load(const char* filename)
 			ent->model.translate(position.x, position.y, position.z);
 		}
 
+		// Add rotation for x and y axis
+		if (cJSON_GetObjectItem(entity_json, "angle_x"))
+		{
+			float angle = cJSON_GetObjectItem(entity_json, "angle_x")->valuedouble;
+			ent->model.rotate(angle * DEG2RAD, Vector3(1, 0, 0));
+		}
+
+		if (cJSON_GetObjectItem(entity_json, "angle_y"))
+		{
+			float angle = cJSON_GetObjectItem(entity_json, "angle_y")->valuedouble;
+			ent->model.rotate(angle * DEG2RAD, Vector3(0, 0, -1));
+		}
+
+		// z axis rotation
 		if (cJSON_GetObjectItem(entity_json, "angle"))
 		{
 			float angle = cJSON_GetObjectItem(entity_json, "angle")->valuedouble;
@@ -127,8 +145,13 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 {
 	if (type == "PREFAB")
 		return new GTR::PrefabEntity();
-    return NULL;
+
+	if (type == "LIGHT")
+		return new GTR::LightEntity();
+
+	return NULL;
 }
+
 
 void GTR::BaseEntity::renderInMenu()
 {
@@ -139,9 +162,6 @@ void GTR::BaseEntity::renderInMenu()
 	ImGuiMatrix44(model, "Model");
 #endif
 }
-
-
-
 
 GTR::PrefabEntity::PrefabEntity()
 {
@@ -172,3 +192,83 @@ void GTR::PrefabEntity::renderInMenu()
 #endif
 }
 
+GTR::LightEntity::LightEntity()
+{
+	// Initialize to zero all variables
+	entity_type = LIGHT;
+	light_type = LightEntity::eTypeOfLight::NONE;
+	color.set(0, 0, 0);
+	intensity = 0;
+	max_distance = 0;
+	cone_angle = 0;
+	cone_exp = 0;
+
+	area_size = 0;
+	target = vec3(0.0, 0.0, 0.0);
+
+	cast_shadows = false;
+	shadow_bias = 0;
+
+	light_camera = NULL;
+	fbo = NULL;
+	shadowmap = NULL;
+	light_camera = NULL;
+}
+
+void GTR::LightEntity::renderInMenu() {
+	//First render the base menu
+	BaseEntity::renderInMenu();
+#ifndef SKIP_IMGUI
+	ImGui::Text("filename: %s", filename.c_str()); // Edit 3 floats representing a color
+
+	std::string type_str;
+	switch (light_type) {
+	case eTypeOfLight::POINT: type_str = "POINT"; break;
+	case eTypeOfLight::SPOT: type_str = "SPOT"; break;
+	case eTypeOfLight::DIRECTIONAL: type_str = "DIRECTIONAL"; break;
+	}
+
+	ImGui::Text("LightType: %s", type_str.c_str());
+	ImGui::ColorEdit3("Color", color.v);
+	ImGui::SliderFloat("Intensity", &intensity, 0.0, 10);
+	ImGui::SliderFloat("Maximum Distance", &max_distance, 0.0, 1000);
+
+	// Show the parameters depending on the type of light
+	if (light_type == LightEntity::eTypeOfLight::SPOT) {
+		ImGui::SliderFloat("Cone Angle", &cone_angle, 0.0, 80);
+		ImGui::SliderFloat("Cone Exponential", &cone_exp, 0.0, 100);
+	}
+	else if (light_type == LightEntity::eTypeOfLight::DIRECTIONAL){
+		ImGui::SliderFloat("Area Size", &area_size, 0.0, 2000);
+		ImGui::DragFloat3("Target", &target.x, 1, -80, 80);
+	}
+	if (cast_shadows) {
+		ImGui::Checkbox("Shadows", &cast_shadows);
+		ImGui::SliderFloat("Shadow Bias", &shadow_bias, 0.00001, 0.5);
+	}
+#endif
+
+}
+
+void GTR::LightEntity::configure(cJSON* json)
+{
+	// Read parameters
+	color = readJSONVector3(json, "color", color);
+	intensity = readJSONNumber(json, "intensity", intensity);
+	std::string str = readJSONString(json, "light_type", "");
+	if (str == "POINT")
+		light_type = eTypeOfLight::POINT;
+	else if (str == "SPOT")
+		light_type = eTypeOfLight::SPOT;
+	else if (str == "DIRECTIONAL")
+		light_type = eTypeOfLight::DIRECTIONAL;
+	else
+		light_type = eTypeOfLight::NONE;
+
+	area_size = readJSONNumber(json, "area_size", area_size);
+	max_distance = readJSONNumber(json, "max_dist", max_distance);
+	cone_angle = readJSONNumber(json, "cone_angle", cone_angle);
+	cone_exp = readJSONNumber(json, "cone_exp", cone_angle);
+	cast_shadows = readJSONBool(json, "cast_shadows", false);
+	shadow_bias = readJSONNumber(json, "shadow_bias", shadow_bias);
+}
